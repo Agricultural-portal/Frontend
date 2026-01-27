@@ -2,6 +2,20 @@ import api from './api';
 
 const adminService = {
   /**
+   * Get dashboard statistics
+   * @returns {Promise<Object>}
+   */
+  getDashboardStats: async () => {
+    try {
+      const response = await api.get('/admin/dashboard/stats');
+      return response.data;
+    } catch (error) {
+      const message = error.response?.data?.message || error.response?.data || 'Failed to fetch dashboard statistics';
+      throw new Error(message);
+    }
+  },
+
+  /**
    * Get all farmers
    * @returns {Promise<Array>}
    */
