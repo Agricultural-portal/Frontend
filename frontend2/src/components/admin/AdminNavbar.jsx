@@ -162,12 +162,24 @@ export function AdminNavbar({ onLogout }) {
           <DropdownMenuContent align="end" className="w-56 mt-2 rounded-xl shadow-xl border-none p-1">
             <DropdownMenuLabel className="px-3 py-2 font-bold opacity-70">My Account</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border/50" />
-            <DropdownMenuItem className="rounded-lg px-3 py-2 cursor-pointer gap-2"><div className="w-1 h-4 bg-primary rounded-full" />Profile Settings</DropdownMenuItem>
-            <DropdownMenuItem className="rounded-lg px-3 py-2 cursor-pointer gap-2"><div className="w-1 h-4 bg-chart-4 rounded-full" />System Logs</DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => navigate("/admin/settings?tab=profile")} 
+              className="rounded-lg px-3 py-2 cursor-pointer gap-2"
+            >
+              <div className="w-1 h-4 bg-primary rounded-full" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => navigate("/admin/settings?tab=settings")} 
+              className="rounded-lg px-3 py-2 cursor-pointer gap-2"
+            >
+              <div className="w-1 h-4 bg-chart-4 rounded-full" />
+              System Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border/50" />
             <DropdownMenuItem onClick={handleLogout} className="rounded-lg px-3 py-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive font-bold gap-2">
               <X className="w-4 h-4" />
-              Logout Session
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
