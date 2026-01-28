@@ -26,13 +26,13 @@ export function BuyerNavbar({ onNavigate, onLogout }) {
       return currentUser.profileImageUrl;
     }
     // Generate avatar based on user name or email
-    const seed = currentUser?.name || currentUser?.email || 'buyer';
+    const seed = `${currentUser?.firstName} ${currentUser?.lastName}` || currentUser?.email || 'buyer';
     return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(seed)}`;
   };
 
   const getUserInitials = () => {
-    if (currentUser?.name) {
-      return currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase();
+    if (currentUser?.firstName && currentUser?.lastName) {
+      return (currentUser.firstName[0] + currentUser.lastName[0]).toUpperCase();
     }
     return 'BU';
   };
@@ -84,7 +84,7 @@ export function BuyerNavbar({ onNavigate, onLogout }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 pr-1">
               <span className="text-sm font-medium hidden sm:inline-block">
-                {currentUser?.name || "Buyer User"}
+                {currentUser?.firstName} {currentUser?.lastName || "Buyer User"}
               </span>
               <Avatar className="w-8 h-8">
                 <AvatarImage src={getUserAvatar()} />

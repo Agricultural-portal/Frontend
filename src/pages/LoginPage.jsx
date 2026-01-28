@@ -23,7 +23,10 @@ export default function LoginPage() {
 
                 setCurrentUser({
                     id: user.id,
-                    name: user.fullName,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    fullName: user.fullName, // Keep for backward compatibility
+                    name: user.fullName, // Keep for backward compatibility
                     email: user.email,
                     role: role,
                     token: user.token
@@ -31,13 +34,15 @@ export default function LoginPage() {
 
                 console.log("User set after login:", {
                     id: user.id,
-                    name: user.fullName,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    fullName: user.fullName,
                     email: user.email,
                     role: role,
                     hasToken: !!user.token
                 });
 
-                toast.success(`Welcome back, ${user.fullName}!`);
+                toast.success(`Welcome back, ${user.firstName}!`);
                 navigate(`/${role}/dashboard`);
                 return;
             } else {

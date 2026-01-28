@@ -15,8 +15,8 @@ export function BuyerProfile() {
   const [isEditing, setIsEditing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: currentUser?.name?.split(' ')[0] || '',
-    lastName: currentUser?.name?.split(' ').slice(1).join(' ') || '',
+    firstName: currentUser?.firstName || '',
+    lastName: currentUser?.lastName || '',
     email: currentUser?.email || '',
     phone: currentUser?.phone || '',
     address: currentUser?.address || '',
@@ -79,8 +79,9 @@ export function BuyerProfile() {
   };
 
   const getInitials = () => {
-    const name = currentUser?.name || 'User';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+    const firstName = currentUser?.firstName || '';
+    const lastName = currentUser?.lastName || '';
+    return (firstName[0] || '') + (lastName[0] || '');
   };
 
   return (
@@ -136,7 +137,7 @@ export function BuyerProfile() {
             </div>
             
             <div className="text-center">
-              <h3 className="font-semibold text-lg">{currentUser?.name}</h3>
+              <h3 className="font-semibold text-lg">{currentUser?.firstName} {currentUser?.lastName}</h3>
               <p className="text-sm text-muted-foreground capitalize">{currentUser?.role}</p>
             </div>
 

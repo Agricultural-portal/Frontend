@@ -22,7 +22,7 @@ export function MyCart() {
   const { cart, removeFromCart, updateCartItem, clearCart, addOrder, addNotification, currentUser, fetchOrdersFromBackend, fetchDashboardStatsFromBackend } = useAppContext();
   const [showCheckoutDialog, setShowCheckoutDialog] = useState(false);
   const [checkoutForm, setCheckoutForm] = useState({
-    name: currentUser?.name || "John Smith",
+    name: `${currentUser?.firstName} ${currentUser?.lastName}` || "John Smith",
     email: currentUser?.email || "john.smith@email.com",
     phone: "+91 98765 43210",
     address: "123 Main Street, City",

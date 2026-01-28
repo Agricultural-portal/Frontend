@@ -52,10 +52,10 @@ export function Settings() {
           <Card className="border-none shadow-sm text-center p-6 bg-white">
             <CardContent className="space-y-4 pt-0">
               <div className="w-24 h-24 bg-primary text-primary-foreground rounded-full mx-auto flex items-center justify-center text-3xl font-bold shadow-sm">
-                {currentUser?.name?.split(" ").map(n => n[0]).join("") || "BU"}
+                {(currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || '') || "BU"}
               </div>
               <div>
-                <h2 className="text-xl font-bold">{currentUser?.name || "Buyer User"}</h2>
+                <h2 className="text-xl font-bold">{currentUser?.firstName} {currentUser?.lastName || "Buyer User"}</h2>
                 <p className="text-sm text-muted-foreground">Member since 2024</p>
               </div>
               <Button variant="outline" size="sm" className="w-full">Change Photo</Button>
@@ -93,7 +93,8 @@ export function Settings() {
               <CardHeader><CardTitle className="text-lg">Personal Information</CardTitle></CardHeader>
               <CardContent className="space-y-6 pt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-bold">
-                  <div className="space-y-2"><Label>Full Name</Label><Input defaultValue={currentUser?.name || "John Smith"} /></div>
+                  <div className="space-y-2"><Label>First Name</Label><Input defaultValue={currentUser?.firstName || "John"} /></div>
+                  <div className="space-y-2"><Label>Last Name</Label><Input defaultValue={currentUser?.lastName || "Smith"} /></div>
                   <div className="space-y-2"><Label>Email</Label><Input type="email" defaultValue={currentUser?.email || "john.smith@example.com"} /></div>
                   <div className="space-y-2"><Label>Phone</Label><Input type="tel" defaultValue="+91 98765 43210" /></div>
                   <div className="space-y-2"><Label>Location</Label><Input defaultValue="Ludhiana, Punjab" /></div>

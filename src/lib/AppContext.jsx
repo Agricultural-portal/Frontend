@@ -338,7 +338,7 @@ export function AppProvider({ children }) {
                     status: order.status.toLowerCase(), // Convert to lowercase for frontend
                     totalAmount: parseFloat(order.totalAmount),
                     items: order.items,
-                    buyer: currentUser?.name || "Buyer", // Add buyer field
+                    buyer: `${currentUser?.firstName} ${currentUser?.lastName}` || "Buyer", // Add buyer field
                     quantity: order.items.map(item => `${item.quantity} units`).join(', '), // Add quantity field
                     shippingAddress: order.shippingAddress
                 }));

@@ -72,7 +72,7 @@ export function MyOrders() {
       if (response.ok) {
         toast.success("Rating submitted successfully to the farmer!");
         addFarmerRating({
-          buyerName: currentUser?.name || "John Smith",
+          buyerName: `${currentUser?.firstName} ${currentUser?.lastName}` || "John Smith",
           farmerName: "Rajesh Kumar",
           rating: rating,
           comment: comment,

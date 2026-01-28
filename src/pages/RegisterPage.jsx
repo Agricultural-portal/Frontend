@@ -7,14 +7,9 @@ export default function RegisterPage() {
 
     const handleRegister = async (data) => {
         try {
-            // Split fullName into first and last name
-            const nameParts = data.fullName.trim().split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.slice(1).join(' ') || 'User'; // Provide default if no last name
-            
-            // Ensure we have both first and last name
-            if (!firstName.trim()) {
-                toast.error("Please provide a valid full name");
+            // Validate that we have both first and last name
+            if (!data.firstName.trim() || !data.lastName.trim()) {
+                toast.error("Please provide both first name and last name");
                 return;
             }
             
@@ -28,8 +23,8 @@ export default function RegisterPage() {
 
             if (data.role === 'admin') {
                 payload = {
-                    firstName: firstName,
-                    lastName: lastName,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
                     email: data.email,
                     phone: data.phone,
                     addresss: data.location, // Use full location as address
@@ -41,8 +36,8 @@ export default function RegisterPage() {
                 endpoint = "http://localhost:8080/api/auth/signup/admin";
             } else if (data.role === 'buyer') {
                 payload = {
-                    firstName: firstName,
-                    lastName: lastName,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
                     email: data.email,
                     phone: data.phone,
                     addresss: data.location,
@@ -54,8 +49,8 @@ export default function RegisterPage() {
                 endpoint = "http://localhost:8080/api/auth/signup/buyer";
             } else if (data.role === 'farmer') {
                 payload = {
-                    firstName: firstName,
-                    lastName: lastName,
+                    firstName: data.firstName,
+                    lastName: data.lastName,
                     email: data.email,
                     phone: data.phone,
                     addresss: data.location,
