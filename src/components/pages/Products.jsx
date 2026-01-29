@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -33,10 +33,19 @@ import { Edit, Eye, Package, Plus, Trash2 } from "lucide-react";
 import { useAppContext } from "@/lib/AppContext";
 import { toast } from "sonner";
 import { ImageWithFallback } from "../figma/ImageWithFallback";
+import { ProductCard } from "../farmer/ProductCard";
+import { ProductFormDialog } from "../farmer/ProductFormDialog";
+import { ProductOrdersDialog } from "../farmer/ProductOrdersDialog";
+import { OrderDetailDialog } from "../farmer/OrderDetailDialog";
+import { productService } from "@/services/productService";
 
 export function Products() {
-  const { products, orders, addProduct, updateProduct, deleteProduct, updateOrder } = useAppContext();
+  const { updateOrder, currentUser } = useAppContext();
+  // Fallback farmer ID if not logged in (for dev)
+  const farmerId = currentUser?.id || 1;
 
+  const [myProducts, setMyProducts] = useState([]);
+  const [myOrders, setMyOrders] = useState([]); // Local state for orders
   const [selectedTab, setSelectedTab] = useState("products");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -44,97 +53,112 @@ export function Products() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "Vegetables",
-    price: "",
-    unit: "KG",
-    quantity: "",
-    status: "active",
-    image: "",
-  });
+  const [selectedProductForOrders, setSelectedProductForOrders] = useState(null);
+  const [isProductOrdersOpen, setIsProductOrdersOpen] = useState(false);
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      category: "Vegetables",
-      price: "",
-      unit: "KG",
-      quantity: "",
-      status: "active",
-      image: "",
-    });
+  // Fetch products and orders on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const productsData = await productService.getProducts();
+        setMyProducts(productsData);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        toast.error("Failed to load products");
+      }
+
+      try {
+        const ordersData = await orderService.getOrders();
+        setMyOrders(ordersData);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+        toast.error("Failed to load orders");
+      }
+    };
+
+    fetchData();
+  }, [currentUser]); // Refetch if user changes
+
+  const handleOpenProductOrders = (product) => {
+    setSelectedProductForOrders(product);
+    setIsProductOrdersOpen(true);
   };
 
-  const handleAddProduct = () => {
-    if (!formData.name || !formData.price || !formData.quantity) {
-      toast.error("Please fill in all required fields");
-      return;
+
+  const handleAddProduct = async (submissionData) => {
+    try {
+      const newProduct = await productService.addProduct(submissionData);
+      setMyProducts([...myProducts, newProduct]);
+      toast.success("Product added successfully!");
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to add product");
     }
-
-    addProduct({
-      ...formData,
-      price: parseFloat(formData.price),
-      quantity: parseInt(formData.quantity),
-      image: formData.image || "https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400",
-    });
-
-    toast.success("Product added successfully!");
-    setIsAddDialogOpen(false);
-    resetForm();
   };
 
-  const handleEditProduct = () => {
-    if (!formData.name || !formData.price || !formData.quantity) {
-      toast.error("Please fill in all required fields");
-      return;
+  const handleEditProduct = async (submissionData) => {
+    if (!selectedProduct) return;
+
+    try {
+      const updatedProduct = await productService.updateProduct(selectedProduct.id, submissionData);
+      setMyProducts(myProducts.map(p => p.id === selectedProduct.id ? updatedProduct : p));
+      toast.success("Product updated successfully!");
+      setIsEditDialogOpen(false);
+      setSelectedProduct(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update product");
     }
-
-    updateProduct(selectedProduct.id, {
-      ...formData,
-      price: parseFloat(formData.price),
-      quantity: parseInt(formData.quantity),
-    });
-
-    toast.success("Product updated successfully!");
-    setIsEditDialogOpen(false);
-    setSelectedProduct(null);
-    resetForm();
   };
 
   const openEditDialog = (product) => {
     setSelectedProduct(product);
-    setFormData({
-      name: product.name,
-      category: product.category,
-      price: product.price.toString(),
-      unit: product.unit,
-      quantity: product.quantity.toString(),
-      status: product.status,
-      image: product.image,
-    });
     setIsEditDialogOpen(true);
   };
 
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = async (productId) => {
     if (window.confirm("Are you sure you want to delete this product?")) {
-      deleteProduct(productId);
-      toast.success("Product deleted successfully!");
+      try {
+        await productService.deleteProduct(productId);
+        setMyProducts(myProducts.filter(p => p.id !== productId));
+        toast.success("Product deleted successfully!");
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to delete product");
+      }
     }
   };
 
-  const handleUpdateOrderStatus = (orderId, newStatus) => {
-    updateOrder(orderId, { status: newStatus });
-    toast.success(`Order status updated to ${newStatus}`);
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    try {
+      await orderService.updateOrderStatus(orderId, newStatus);
+      setMyOrders(myOrders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      toast.success(`Order status updated to ${newStatus}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update order status");
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (orderId, newStatus) => {
+    try {
+      await orderService.updatePaymentStatus(orderId, newStatus);
+      setMyOrders(myOrders.map(o => o.id === orderId ? { ...o, paymentStatus: newStatus } : o));
+      toast.success(`Payment status updated to ${newStatus}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update payment status");
+    }
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "active": return "bg-chart-1 text-white";
-      case "inactive": return "bg-muted text-foreground";
-      case "delivered": return "bg-chart-1 text-white";
-      case "in-transit": return "bg-chart-4 text-white";
-      case "pending": return "bg-chart-2 text-white";
+    switch (status?.toUpperCase()) {
+      case "CONFIRMED": return "bg-blue-500 text-white hover:bg-blue-600";
+      case "SHIPPED": return "bg-chart-4 text-white hover:bg-chart-4/90";
+      case "DELIVERED": return "bg-green-500 text-white hover:bg-green-600";
+      case "PENDING": return "bg-yellow-500 text-white hover:bg-yellow-600";
+      case "CANCELLED": return "bg-red-500 text-white hover:bg-red-600";
       default: return "bg-muted text-foreground";
     }
   };
@@ -146,20 +170,20 @@ export function Products() {
           <h1 className="text-3xl font-bold">My Products & Orders</h1>
           <p className="text-muted-foreground">Manage your products and track orders</p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2 shadow-lg">
-          <Plus className="w-4 h-4" />
+        <Button onClick={() => setIsAddDialogOpen(true)} className="gap-2 shadow-lg bg-green-600 hover:bg-green-700 text-white rounded-lg px-6">
+          <Plus className="w-5 h-5 mr-2" />
           Add New Product
         </Button>
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList>
-          <TabsTrigger value="products">My Products ({products.length})</TabsTrigger>
-          <TabsTrigger value="orders">Orders Received ({orders.length})</TabsTrigger>
+          <TabsTrigger value="products">My Products ({myProducts.length})</TabsTrigger>
+          <TabsTrigger value="orders">Orders Received ({myOrders.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="products" className="mt-6">
-          {products.length === 0 ? (
+          {myProducts.length === 0 ? (
             <Card className="border-none shadow-sm">
               <CardContent className="p-12 text-center">
                 <Package className="w-12 h-12 mx-auto text-muted-foreground opacity-50 mb-4" />
@@ -169,106 +193,126 @@ export function Products() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {products.map((product) => (
-                <Card key={product.id} className="overflow-hidden border-none shadow-sm group">
-                  <div className="aspect-video w-full overflow-hidden bg-muted relative">
-                    <ImageWithFallback src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    <Badge className={`absolute top-3 right-3 ${getStatusColor(product.status)}`}>{product.status}</Badge>
-                  </div>
-                  <CardContent className="p-6 space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h3 className="font-bold text-lg">{product.name}</h3>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider">{product.category}</p>
-                      </div>
-                      <p className="text-xl font-bold text-primary">₹{product.price.toLocaleString()}<span className="text-xs text-muted-foreground font-normal">/{product.unit}</span></p>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Package className="w-4 h-4" />
-                      <span>Stock: {product.quantity} {product.unit}s</span>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditDialog(product)}><Edit className="w-4 h-4 mr-2" /> Edit</Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDeleteProduct(product.id)} className="text-destructive hover:bg-destructive/10"><Trash2 className="w-4 h-4" /></Button>
-                    </div>
-                  </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {myProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onEdit={openEditDialog}
+                  onDelete={handleDeleteProduct}
+                  onViewOrders={() => handleOpenProductOrders(product)}
+                />
               ))}
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="orders" className="mt-6">
-          <Card className="border-none shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead>Order ID</TableHead>
-                      <TableHead>Buyer</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-bold">#{order.id}</TableCell>
-                        <TableCell>{order.buyer}</TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell className="text-right font-bold text-primary">₹{order.totalAmount.toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Select value={order.status} onValueChange={(val) => handleUpdateOrderStatus(order.id, val)}>
-                            <SelectTrigger className="h-8 border-none bg-transparent hover:bg-muted">
-                              <SelectValue><Badge className={getStatusColor(order.status)}>{order.status}</Badge></SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="in-transit">In Transit</SelectItem>
-                              <SelectItem value="delivered">Delivered</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => { setSelectedOrder(order); setIsOrderDetailDialogOpen(true); }}><Eye className="w-4 h-4" /></Button>
-                        </TableCell>
+          {myOrders.length === 0 ? (
+            <Card className="border-none shadow-sm">
+              <CardContent className="p-12 text-center">
+                <Package className="w-12 h-12 mx-auto text-muted-foreground opacity-50 mb-4" />
+                <h3 className="text-lg font-bold">No Orders Yet</h3>
+                <p className="text-muted-foreground mb-6">Orders placed by buyers will appear here.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-none shadow-sm overflow-hidden">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-muted/50">
+                      <TableRow>
+                        <TableHead>Order ID</TableHead>
+                        <TableHead>Buyer</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Payment</TableHead>
+                        <TableHead className="text-right">Total Amount</TableHead>
+                        <TableHead></TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {myOrders.map((item) => (
+                        <TableRow key={item.orderItemId || item.id}>
+                          <TableCell className="font-bold">#{item.orderId}</TableCell>
+                          <TableCell>{item.buyerName || "Unknown Buyer"}</TableCell>
+                          <TableCell>{item.productName || "Unknown Product"}</TableCell>
+                          <TableCell>{item.quantity} {item.productUnit || "Unit"}</TableCell>
+                          <TableCell>{item.orderDate ? new Date(item.orderDate).toLocaleDateString() : "N/A"}</TableCell>
+                          <TableCell>
+                            <Select value={item.status} onValueChange={(val) => handleUpdateOrderStatus(item.orderId, val)}>
+                              <SelectTrigger className="h-8 border-none bg-transparent hover:bg-muted p-0">
+                                <SelectValue><Badge className={getStatusColor(item.status)}>{item.status}</Badge></SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PENDING">Pending</SelectItem>
+                                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+                                <SelectItem value="SHIPPED">Shipped</SelectItem>
+                                <SelectItem value="DELIVERED">Delivered</SelectItem>
+                                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            <Select value={item.paymentStatus || 'PENDING'} onValueChange={(val) => handleUpdatePaymentStatus(item.orderId, val)}>
+                              <SelectTrigger className={`h-8 border-none p-0 ${item.paymentStatus === 'PAID' ? 'text-green-600' : 'text-red-600'}`}>
+                                <SelectValue>
+                                  <Badge variant={item.paymentStatus === 'PAID' ? 'success' : 'destructive'}
+                                    className={item.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-none' : 'bg-red-100 text-red-700 hover:bg-red-200 border-none'}>
+                                    {item.paymentStatus || 'UNPAID'}
+                                  </Badge>
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="PENDING">Pending</SelectItem>
+                                <SelectItem value="PAID">Paid</SelectItem>
+                                <SelectItem value="FAILED">Failed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="text-right font-bold text-primary">₹{item.totalAmount?.toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" onClick={() => { setSelectedOrder(item); setIsOrderDetailDialogOpen(true); }}><Eye className="w-4 h-4" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Add New Product</DialogTitle></DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2"><Label>Product Name</Label><Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Fresh Tomatoes" /></div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Price (₹)</Label><Input type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} /></div>
-              <div className="space-y-2"><Label>Unit</Label>
-                <Select value={formData.unit} onValueChange={(v) => setFormData({ ...formData, unit: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="KG">kg</SelectItem>
-                    <SelectItem value="LITRE">litre</SelectItem>
-                    <SelectItem value="DOZEN">dozen</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2"><Label>Available Stock</Label><Input type="number" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: e.target.value })} /></div>
-            <Button className="w-full mt-2" onClick={handleAddProduct}>Publish Product</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <ProductFormDialog
+        open={isAddDialogOpen}
+        onOpenChange={setIsAddDialogOpen}
+        onSubmit={handleAddProduct}
+      />
+
+      <ProductFormDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSubmit={handleEditProduct}
+        initialData={selectedProduct}
+        key={selectedProduct?.id} // Force re-render when product changes
+      />
+
+      <ProductOrdersDialog
+        open={isProductOrdersOpen}
+        onOpenChange={setIsProductOrdersOpen}
+        product={selectedProductForOrders}
+      />
+
+      <OrderDetailDialog
+        open={isOrderDetailDialogOpen}
+        onOpenChange={setIsOrderDetailDialogOpen}
+        order={selectedOrder}
+      />
+    </div >
   );
 }
