@@ -1,147 +1,223 @@
-"use client";
-
-import { useState } from "react";
-import { Card, CardContent } from "../ui/card";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Progress } from "../ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import { Plus, Eye, Edit, CheckCircle2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { mockTasks, mockCropCycles } from "@/lib/mockData";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { taskService } from "@/services/taskService";
+import { useAppContext } from "@/lib/AppContext";
+import { TaskCard } from "../farmer/TaskCard";
+import { TaskFormDialog } from "../farmer/TaskFormDialog";
+import { TaskViewDialog } from "../farmer/TaskViewDialog";
+import { TaskFilters } from "../farmer/TaskFilters";
 
 export function Tasks() {
-  const [selectedTab, setSelectedTab] = useState("all");
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [allTasks, setAllTasks] = useState(mockTasks);
+  const { currentUser, cropCycles } = useAppContext();
+  const farmerId = currentUser?.id || 1; // Fallback to 1 for dev if not logged in
+  const [selectedTab, setSelectedTab] = useState("All Tasks");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [viewingTask, setViewingTask] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [allTasks, setAllTasks] = useState([]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [farmerId, selectedTab]);
+
+  const fetchTasks = async () => {
+    try {
+      const data = await taskService.getAllTasks();
+      const mappedTasks = data.map(t => ({
+        ...t,
+        title: t.name,
+        cost: t.expense || 0,
+      }));
+      setAllTasks(mappedTasks);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      toast.error("Failed to load tasks");
+    }
+  };
 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    category: "general",
+    category: "General",
+    cropCycle: "",
+    startDate: "",
     dueDate: "",
     priority: "medium",
     cost: "0",
   });
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "completed": return "bg-chart-1 text-white";
-      case "in-progress": return "bg-chart-4 text-white";
-      default: return "bg-muted text-foreground";
-    }
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      category: "General",
+      cropCycle: "",
+      startDate: "",
+      dueDate: "",
+      priority: "medium",
+      cost: "0",
+    });
+    setEditingId(null);
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case "high": return "bg-chart-5 text-white";
-      case "medium": return "bg-chart-4 text-white";
-      default: return "bg-chart-2 text-white";
-    }
+  const handleEditClick = (task) => {
+    setFormData({
+      title: task.title,
+      description: task.description || "",
+      category: task.category === "Crop Cycle" ? "Crop Cycle" : "General",
+      cropCycle: task.cropCycleId?.toString() || "",
+      startDate: task.startDate || "",
+      dueDate: task.dueDate,
+      priority: task.priority,
+      cost: task.cost.toString(),
+    });
+    setEditingId(task.id);
+    setIsFormOpen(true);
   };
 
-  const handleCreateTask = () => {
+  const handleCreateNewClick = () => {
+    resetForm();
+    setIsFormOpen(true);
+  }
+
+  const handleSaveTask = async () => {
     if (!formData.title.trim() || !formData.dueDate) {
       toast.error("Please provide title and due date");
       return;
     }
 
-    const newTask = {
-      id: Math.max(0, ...allTasks.map(t => t.id)) + 1,
-      ...formData,
-      status: "pending",
-      progress: 0,
-      cost: parseFloat(formData.cost) || 0,
+    const start = new Date(formData.startDate || new Date().toISOString().split('T')[0]);
+    const due = new Date(formData.dueDate);
+
+    if (due <= start) {
+      toast.error("Due Date must be greater than Start Date");
+      return;
+    }
+
+    const payload = {
+      name: formData.title,
+      description: formData.description,
+      category: formData.category,
+      startDate: formData.startDate || new Date().toISOString().split('T')[0],
+      dueDate: formData.dueDate,
+      priority: formData.priority,
+      priority: formData.priority,
+      // estimatedCost: parseFloat(formData.cost) || 0,
+      expense: parseFloat(formData.cost) || 0,
+      cropCycleId: formData.cropCycle ? parseInt(formData.cropCycle) : null,
+      status: "pending"
     };
 
-    setAllTasks([newTask, ...allTasks]);
-    setIsAddDialogOpen(false);
-    toast.success("Task created!");
+    try {
+      if (editingId) {
+        await taskService.updateTask(editingId, payload);
+        toast.success("Task updated!");
+      } else {
+        await taskService.createTask(payload);
+        toast.success("Task created!");
+      }
+      fetchTasks();
+      setIsFormOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error("Error saving task:", error);
+      toast.error("Failed to save task");
+    }
   };
 
-  const handleMarkComplete = (id) => {
-    setAllTasks(allTasks.map(t => t.id === id ? { ...t, status: "completed", progress: 100 } : t));
-    toast.success("Task completed!");
+  const handleMarkComplete = async (id) => {
+    try {
+      await taskService.completeTask(id);
+      fetchTasks();
+      toast.success("Task marked as complete!");
+    } catch (error) {
+      console.error("Error completing task:", error);
+      toast.error("Failed to mark task as complete");
+    }
+  };
+
+  const handleDeleteTask = async (id) => {
+    try {
+      await taskService.deleteTask(id);
+      fetchTasks();
+      toast.success("Task deleted successfully");
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error("Failed to delete task");
+    }
   };
 
   const filteredTasks = allTasks.filter(t => {
-    if (selectedTab === "all") return true;
-    if (selectedTab === "completed") return t.status === "completed";
-    return t.category.toLowerCase() === selectedTab;
+    const matchesTab =
+      selectedTab === "All Tasks" ? (t.status?.toLowerCase() !== 'deleted') :
+        selectedTab === "Completed" ? t.status?.toLowerCase() === "completed" :
+          selectedTab === "General" ? (t.category === "General" && t.status?.toLowerCase() !== 'deleted') :
+            selectedTab === "Crop Cycle" ? ((t.category === "Crop Cycle" || t.category === "Crop_Cycle") && t.status?.toLowerCase() !== 'deleted') : true;
+
+    return matchesTab;
   });
 
+  const tabs = ["All Tasks", "General", "Crop Cycle", "Completed"];
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 max-w-7xl mx-auto space-y-8">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">My Tasks</h1>
-          <p className="text-muted-foreground">Stay organized with your farm activities</p>
+          <h1 className="text-3xl font-bold text-slate-800">My Tasks</h1>
+          <p className="text-muted-foreground mt-1">Manage your farm tasks and activities</p>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shadow-lg"><Plus className="w-4 h-4" /> New Task</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>Create Task</DialogTitle></DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2"><Label>Task Title</Label><Input value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2"><Label>Due Date</Label><Input type="date" value={formData.dueDate} onChange={e => setFormData({ ...formData, dueDate: e.target.value })} /></div>
-                <div className="space-y-2"><Label>Priority</Label>
-                  <Select value={formData.priority} onValueChange={v => setFormData({ ...formData, priority: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectItem value="low">Low</SelectItem><SelectItem value="medium">Medium</SelectItem><SelectItem value="high">High</SelectItem></SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button className="w-full mt-4" onClick={handleCreateTask}>Save Task</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+
+        <TaskFormDialog
+          open={isFormOpen}
+          onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) resetForm();
+          }}
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleSaveTask}
+          isEditing={!!editingId}
+          cropCycles={cropCycles}
+        />
       </div>
 
-      <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-        <TabsList><TabsTrigger value="all">All</TabsTrigger><TabsTrigger value="completed">Completed</TabsTrigger></TabsList>
-        <div className="mt-6 space-y-4">
-          {filteredTasks.map(task => (
-            <Card key={task.id} className="border-none shadow-sm overflow-hidden">
-              <CardContent className="p-6 flex items-center gap-4">
-                <div className="flex-1 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-bold text-lg">{task.title}</h3>
-                    <Badge className={getStatusColor(task.status)}>{task.status}</Badge>
-                    <Badge className={getPriorityColor(task.priority)}>{task.priority}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Due: {task.dueDate}</p>
-                  {task.status !== "completed" && <Progress value={task.progress} className="h-1.5 w-1/2" />}
-                </div>
-                <div className="flex gap-2">
-                  {task.status !== "completed" && <Button size="sm" onClick={() => handleMarkComplete(task.id)}><CheckCircle2 className="w-4 h-4 mr-2" /> Complete</Button>}
-                  <Button variant="ghost" size="icon"><Edit className="w-4 h-4" /></Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </Tabs>
+      {/* Tabs */}
+      <TaskFilters
+        tabs={tabs}
+        selectedTab={selectedTab}
+        onSelectTab={setSelectedTab}
+      />
+
+      {/* Task List */}
+      <div className="space-y-4">
+        {filteredTasks.map(task => (
+          <TaskCard
+            key={task.id}
+            task={task}
+            onView={() => setViewingTask(task)}
+            onEdit={handleEditClick}
+            onComplete={handleMarkComplete}
+            onDelete={handleDeleteTask}
+          />
+        ))}
+
+        {filteredTasks.length === 0 && (
+          <div className="text-center py-12 text-slate-500">
+            <p>No tasks found matching your filters.</p>
+          </div>
+        )}
+      </div>
+
+      {/* View Task Dialog */}
+      <TaskViewDialog
+        task={viewingTask}
+        open={!!viewingTask}
+        onOpenChange={(open) => !open && setViewingTask(null)}
+        onEdit={handleEditClick}
+      />
+
     </div>
   );
 }
+
