@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { Star, MessageSquare, ThumbsUp } from "lucide-react";
+import { Star } from "lucide-react";
 import { useAppContext } from "@/lib/AppContext";
 import { toast } from "sonner";
+import { Button } from "../ui/button";
 
 export function Ratings() {
   const { currentUser } = useAppContext();
   const [reviews, setReviews] = useState([]);
+  const [allReviews, setAllReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const fetchRatings = async () => {
@@ -28,7 +31,8 @@ export function Ratings() {
             console.log("Ratings data:", data);
             setReviews(data);
           } else {
-            console.error("Failed to fetch ratings", res.status);
+            const errorText = await res.text();
+            console.error("Failed to fetch ratings", res.status, "Error:", errorText);
           }
         } catch (error) {
           console.error("Error fetching ratings:", error);
@@ -43,9 +47,41 @@ export function Ratings() {
     fetchRatings();
   }, [currentUser]);
 
+  const fetchAllRatings = async () => {
+    if (currentUser?.id && currentUser?.token) {
+      try {
+        const res = await fetch(`http://localhost:8080/api/farmers/ratings`, {
+          headers: {
+            'Authorization': `Bearer ${currentUser.token}`
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setAllReviews(data);
+          setShowAll(true);
+        } else {
+          toast.error("Failed to load all reviews");
+        }
+      } catch (error) {
+        console.error("Error fetching all ratings:", error);
+        toast.error("Failed to load all reviews");
+      }
+    }
+  };
+
+  const handleToggleReviews = () => {
+    if (showAll) {
+      setShowAll(false);
+    } else {
+      fetchAllRatings();
+    }
+  };
+
   // Use currentUser's rating or default to 0
   const averageRating = currentUser?.averageRating ? currentUser.averageRating.toFixed(1) : "0.0";
   const totalRatings = currentUser?.totalRatings || 0;
+  const displayedReviews = showAll ? allReviews : reviews;
 
   return (
     <div className="p-6 space-y-6">
@@ -67,14 +103,25 @@ export function Ratings() {
         </Card>
 
         <Card className="md:col-span-2 border-none shadow-sm h-[500px] overflow-auto">
-          <CardHeader><CardTitle className="text-lg">Recent Reviews</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-lg">{showAll ? "All Reviews" : "Recent Reviews"}</CardTitle>
+            {totalRatings >= 5 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleToggleReviews}
+              >
+                {showAll ? "Show Recent" : "Show All Reviews"}
+              </Button>
+            )}
+          </CardHeader>
           <CardContent className="space-y-6">
             {loading ? (
               <p className="text-center text-muted-foreground">Loading reviews...</p>
-            ) : reviews.length === 0 ? (
+            ) : displayedReviews.length === 0 ? (
               <p className="text-center text-muted-foreground">No reviews yet.</p>
             ) : (
-              reviews.map(review => (
+              displayedReviews.map(review => (
                 <div key={review.id} className="flex gap-4 pb-6 border-b border-border/50 last:border-0 last:pb-0">
                   <Avatar>
                     <AvatarFallback>{review.buyerName ? review.buyerName.charAt(0) : "U"}</AvatarFallback>
@@ -93,10 +140,6 @@ export function Ratings() {
                       <span className="text-xs text-muted-foreground">• {review.productName}</span>
                     </div>
                     <p className="text-sm text-muted-foreground italic">"{review.comment}"</p>
-                    <div className="flex gap-4 pt-2">
-                      <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"><ThumbsUp className="w-3 h-3" /> Helpful</button>
-                      <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary"><MessageSquare className="w-3 h-3" /> Reply</button>
-                    </div>
                   </div>
                 </div>
               ))

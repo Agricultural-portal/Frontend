@@ -8,10 +8,12 @@ import { Label } from "../ui/label";
 import { User, Mail, Phone, MapPin, Shield, Bell } from "lucide-react";
 import { useAppContext } from "@/lib/AppContext";
 import { toast } from "sonner";
+import { updateProfileImage } from "@/services/farmerService";
 
 export function Settings() {
-  const { currentUser } = useAppContext();
+  const { currentUser, setCurrentUser } = useAppContext();
   const [activeTab, setActiveTab] = useState("profile");
+  const [uploading, setUploading] = useState(false);
 
   // States for interactive tabs
   const [securityData, setSecurityData] = useState({
@@ -40,6 +42,29 @@ export function Settings() {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const response = await updateProfileImage(file);
+      toast.success("Profile image updated successfully!");
+      // Ideally update context or force reload
+      if (typeof setCurrentUser === 'function') {
+        setCurrentUser(prev => ({ ...prev, profileImageUrl: response.imageUrl }));
+      } else {
+        // Fallback: reload page or just let user know
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 max-w-4xl mx-auto pb-12">
       <div>
@@ -51,14 +76,29 @@ export function Settings() {
         <div className="lg:col-span-1 space-y-4">
           <Card className="border-none shadow-sm text-center p-6 bg-white">
             <CardContent className="space-y-4 pt-0">
-              <div className="w-24 h-24 bg-primary text-primary-foreground rounded-full mx-auto flex items-center justify-center text-3xl font-bold shadow-sm">
-                {(currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || '') || "BU"}
+              <div className="w-24 h-24 bg-primary text-primary-foreground rounded-full mx-auto flex items-center justify-center text-3xl font-bold shadow-sm overflow-hidden">
+                {currentUser?.profileImageUrl ? (
+                  <img src={currentUser.profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  (currentUser?.firstName?.[0] || '') + (currentUser?.lastName?.[0] || '') || "BU"
+                )}
               </div>
               <div>
-                <h2 className="text-xl font-bold">{currentUser?.firstName} {currentUser?.lastName || "Buyer User"}</h2>
-                <p className="text-sm text-muted-foreground">Member since 2024</p>
+                <h2 className="text-xl font-bold">{currentUser?.firstName} {currentUser?.lastName || "Farmer User"}</h2>
               </div>
-              <Button variant="outline" size="sm" className="w-full">Change Photo</Button>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="profile-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  disabled={uploading}
+                />
+                <Button variant="outline" size="sm" className="w-full" onClick={() => document.getElementById('profile-upload').click()} disabled={uploading}>
+                  {uploading ? "Uploading..." : "Change Photo"}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -93,15 +133,46 @@ export function Settings() {
               <CardHeader><CardTitle className="text-lg">Personal Information</CardTitle></CardHeader>
               <CardContent className="space-y-6 pt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-bold">
-                  <div className="space-y-2"><Label>First Name</Label><Input defaultValue={currentUser?.firstName || "John"} /></div>
-                  <div className="space-y-2"><Label>Last Name</Label><Input defaultValue={currentUser?.lastName || "Smith"} /></div>
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" defaultValue={currentUser?.email || "john.smith@example.com"} /></div>
-                  <div className="space-y-2"><Label>Phone</Label><Input type="tel" defaultValue="+91 98765 43210" /></div>
-                  <div className="space-y-2"><Label>Location</Label><Input defaultValue="Ludhiana, Punjab" /></div>
-                </div>
-                <div className="space-y-2 font-bold">
-                  <Label>Bio / Notes</Label>
-                  <textarea className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-primary" defaultValue="Active buyer searching for organic grains and vegetables from direct farm sources." />
+                  <div className="space-y-2">
+                    <Label>First Name</Label>
+                    <Input defaultValue={currentUser?.firstName || ""} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Last Name</Label>
+                    <Input defaultValue={currentUser?.lastName || ""} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input type="email" defaultValue={currentUser?.email || ""} disabled />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Phone</Label>
+                    <Input type="tel" defaultValue={currentUser?.phone || ""} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Address</Label>
+                    <Input defaultValue={currentUser?.addresss || ""} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>City</Label>
+                    <Input defaultValue={currentUser?.city || ""} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>State</Label>
+                    <Input defaultValue={currentUser?.state || ""} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Pincode</Label>
+                    <Input defaultValue={currentUser?.pincode || ""} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Farm Size</Label>
+                    <Input defaultValue={currentUser?.farmSize || ""} placeholder="e.g., 5 acres" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Farm Type</Label>
+                    <Input defaultValue={currentUser?.farmType || ""} placeholder="e.g., Organic, Mixed" />
+                  </div>
                 </div>
                 <div className="flex justify-end pt-4 border-t gap-3">
                   <Button variant="outline">Discard</Button>

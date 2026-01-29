@@ -20,7 +20,7 @@ import {
 import { useAppContext } from "@/lib/AppContext";
 
 export function Navbar({ onNavigate }) {
-  const { notifications, markNotificationAsRead, deleteNotification } = useAppContext();
+  const { notifications, markNotificationAsRead, deleteNotification, currentUser } = useAppContext();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -153,10 +153,10 @@ export function Navbar({ onNavigate }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2">
               <Avatar className="w-8 h-8">
-                <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=farmer" />
-                <AvatarFallback>RK</AvatarFallback>
+                <AvatarImage src={currentUser?.profileImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser?.firstName || 'farmer'}`} />
+                <AvatarFallback>{currentUser?.firstName ? currentUser.firstName[0].toUpperCase() : "U"}</AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium">Rajesh Kumar</span>
+              <span className="text-sm font-medium">{currentUser?.fullName || currentUser?.firstName || "User"}</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
