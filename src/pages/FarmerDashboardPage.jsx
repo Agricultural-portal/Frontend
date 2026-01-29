@@ -11,7 +11,7 @@ const CropCycles = lazy(() => import("@/components/pages/CropCycles").then(m => 
 const Finances = lazy(() => import("@/components/pages/Finances").then(m => ({ default: m.Finances })));
 const Products = lazy(() => import("@/components/pages/Products").then(m => ({ default: m.Products })));
 const Weather = lazy(() => import("@/components/pages/Weather").then(m => ({ default: m.Weather })));
-const Schemes = lazy(() => import("@/components/pages/Schemes").then(m => ({ default: m.Schemes })));
+const GovernmentSchemes = lazy(() => import("@/components/pages/GovernmentSchemes").then(m => ({ default: m.GovernmentSchemes })));
 const Ratings = lazy(() => import("@/components/pages/Ratings").then(m => ({ default: m.Ratings })));
 const Settings = lazy(() => import("@/components/pages/Settings").then(m => ({ default: m.Settings })));
 
@@ -40,7 +40,7 @@ export default function FarmerDashboardPage() {
             case "finances": return <Finances />;
             case "products": return <Products />;
             case "weather": return <Weather />;
-            case "schemes": return <Schemes />;
+            case "schemes": return <GovernmentSchemes />;
             case "ratings": return <Ratings />;
             case "settings": return <Settings />;
             default: return <Dashboard />;
