@@ -45,8 +45,6 @@ export function OrderDetailDialog({ open, onOpenChange, order }) {
 
     const getStatusColor = (status) => {
         switch (status?.toUpperCase()) {
-            case "CONFIRMED": return "bg-blue-500 hover:bg-blue-600";
-            case "SHIPPED": return "bg-chart-4 hover:bg-chart-4/90";
             case "DELIVERED": return "bg-green-500 hover:bg-green-600";
             case "PENDING": return "bg-yellow-500 hover:bg-yellow-600";
             case "CANCELLED": return "bg-red-500 hover:bg-red-600";

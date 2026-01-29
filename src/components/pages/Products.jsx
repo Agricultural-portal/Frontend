@@ -38,6 +38,7 @@ import { ProductFormDialog } from "../farmer/ProductFormDialog";
 import { ProductOrdersDialog } from "../farmer/ProductOrdersDialog";
 import { OrderDetailDialog } from "../farmer/OrderDetailDialog";
 import { productService } from "@/services/productService";
+import { orderService } from "@/services/orderService";
 
 export function Products() {
   const { updateOrder, currentUser } = useAppContext();
@@ -154,8 +155,6 @@ export function Products() {
 
   const getStatusColor = (status) => {
     switch (status?.toUpperCase()) {
-      case "CONFIRMED": return "bg-blue-500 text-white hover:bg-blue-600";
-      case "SHIPPED": return "bg-chart-4 text-white hover:bg-chart-4/90";
       case "DELIVERED": return "bg-green-500 text-white hover:bg-green-600";
       case "PENDING": return "bg-yellow-500 text-white hover:bg-yellow-600";
       case "CANCELLED": return "bg-red-500 text-white hover:bg-red-600";
@@ -249,8 +248,6 @@ export function Products() {
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="PENDING">Pending</SelectItem>
-                                <SelectItem value="CONFIRMED">Confirmed</SelectItem>
-                                <SelectItem value="SHIPPED">Shipped</SelectItem>
                                 <SelectItem value="DELIVERED">Delivered</SelectItem>
                                 <SelectItem value="CANCELLED">Cancelled</SelectItem>
                               </SelectContent>

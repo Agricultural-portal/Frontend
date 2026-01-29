@@ -33,16 +33,15 @@ export function AppProvider({ children }) {
     // State for all entities
     const [products, setProducts] = useState([]); // Start empty - will be loaded from backend
     const [orders, setOrders] = useState([]); // Start empty - will be loaded from backend
-    const [tasks, setTasks] = useState(mockTasks);
-
+    const [tasks, setTasks] = useState([]);
     const [cropCycles, setCropCycles] = useState([]);
-    const [finances, setFinances] = useState(mockFinances);
-    const [schemes, setSchemes] = useState(mockSchemes);
-    const [notifications, setNotifications] = useState(mockNotifications);
-    const [buyers, setBuyers] = useState(mockBuyers);
-    const [farmers, setFarmers] = useState(mockFarmers);
-    const [farmerRatings, setFarmerRatings] = useState(mockFarmerRatings);
-    const [buyerRatings, setBuyerRatings] = useState(mockBuyerRatings);
+    const [finances, setFinances] = useState([]);
+    const [schemes, setSchemes] = useState([]);
+    const [notifications, setNotifications] = useState([]);
+    const [buyers, setBuyers] = useState([]);
+    const [farmers, setFarmers] = useState([]);
+    const [farmerRatings, setFarmerRatings] = useState([]);
+    const [buyerRatings, setBuyerRatings] = useState([]);
     const [cart, setCart] = useState(() => {
         console.log("Initializing cart state");
         return [];
@@ -132,10 +131,12 @@ export function AppProvider({ children }) {
                         category: p.category,
                         image: p.imageUrl || getDefaultProductImage(p.category),
                         farmer: p.farmerName || "Unknown Farmer",
+                        farmerRating: p.farmerRating ? p.farmerRating.toString() : "0",
                         status: p.stock > 0 ? "Available" : "Out of Stock",
-                        rating: "4.5", // Default rating
-                        reviews: Math.floor(Math.random() * 50) + 10, // Random reviews count
-                        location: "Punjab" // Default location
+                        status: p.stock > 0 ? "Available" : "Out of Stock",
+                        rating: p.averageRating ? p.averageRating.toString() : "0",
+                        reviews: p.totalRatings || 0,
+                        location: p.location
                     }));
                     setProducts(transformedProducts);
                     console.log("Products loaded from backend:", transformedProducts.length);
@@ -150,7 +151,7 @@ export function AppProvider({ children }) {
         };
 
         fetchProducts();
-    }, []);
+    }, [currentUser]);
 
     // Fetch cart from backend when user logs in
     useEffect(() => {
@@ -343,10 +344,12 @@ export function AppProvider({ children }) {
                     date: order.createdAt,
                     status: order.status.toLowerCase(), // Convert to lowercase for frontend
                     totalAmount: parseFloat(order.totalAmount),
-                    items: order.items,
+                    items: order.items, // Now contains productId
                     buyer: `${currentUser?.firstName} ${currentUser?.lastName}` || "Buyer", // Add buyer field
                     quantity: order.items.map(item => `${item.quantity} units`).join(', '), // Add quantity field
-                    shippingAddress: order.shippingAddress
+                    shippingAddress: order.shippingAddress,
+                    rated: order.rated, // From backend isRated
+                    rating: order.rating
                 }));
                 setOrders(transformedOrders);
                 console.log("Orders loaded from backend:", transformedOrders.length);
@@ -396,6 +399,14 @@ export function AppProvider({ children }) {
 
     const deleteOrder = (id) => {
         setOrders(orders.filter((o) => o.id !== id));
+    };
+
+    const markOrderAsRated = (orderId, rating) => {
+        setOrders(orders.map(order =>
+            order.id === orderId
+                ? { ...order, rated: true, rating: rating }
+                : order
+        ));
     };
 
     // Task operations
@@ -881,6 +892,7 @@ export function AppProvider({ children }) {
         addOrder,
         updateOrder,
         deleteOrder,
+        markOrderAsRated,
         fetchOrdersFromBackend,
         tasks,
         addTask,

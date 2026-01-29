@@ -20,7 +20,7 @@ import { Search, Package, Star, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 export function MyOrders() {
-  const { orders, addFarmerRating, currentUser } = useAppContext();
+  const { orders, addFarmerRating, markOrderAsRated, currentUser } = useAppContext();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showRatingDialog, setShowRatingDialog] = useState(false);
@@ -56,14 +56,19 @@ export function MyOrders() {
 
     // Call backend to save rating
     try {
-      const response = await fetch("http://localhost:8080/api/ratings/add", {
+      const response = await fetch("http://localhost:8080/api/buyer/ratings/add", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.token}`
+        },
         body: JSON.stringify({
           buyerId: currentUser?.id,
           orderId: selectedOrder?.id,
-          productId: 1, // We would need the product ID from the order. For now hardcoding or deriving.
-          // In real logic, order items should have product ID.
+          // Use the first item's product ID since rating is per order which traditionally was 1-item per order in this flow
+          // If multi-item orders are fully supported, the UI should ask which product to rate. 
+          // For now, defaulting to the first item as per current UI assumption.
+          productId: selectedOrder?.items?.[0]?.productId,
           stars: rating,
           comment: comment
         })
@@ -79,6 +84,9 @@ export function MyOrders() {
           date: new Date().toISOString().split("T")[0],
           orderProduct: selectedOrder?.product
         });
+
+        // Update local state to reflect rating immediately
+        markOrderAsRated(selectedOrder.id, rating);
       }
     } catch (e) {
       console.error("Failed to submit rating", e);
@@ -148,13 +156,34 @@ export function MyOrders() {
 
                 <div className="flex gap-2 w-full md:w-auto h-fit">
                   {order.status.toLowerCase() === "delivered" && (
-                    <Button
-                      size="sm"
-                      className="flex-1 md:flex-none gap-2 font-bold h-10 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 border-none px-6"
-                      onClick={() => handleRateOrder(order)}
-                    >
-                      Rate Order
-                    </Button>
+                    !order.rated ? (
+                      <Button
+                        size="sm"
+                        className="flex-1 md:flex-none gap-2 font-bold h-10 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 border-none px-6"
+                        onClick={() => handleRateOrder(order)}
+                      >
+                        Rate Order
+                      </Button>
+                    ) : (
+                      <div className="flex flex-col items-end gap-1">
+                        <Button
+                          size="sm"
+                          disabled
+                          className="flex-1 md:flex-none gap-2 font-bold h-10 bg-muted text-muted-foreground border-none px-6 opacity-80"
+                        >
+                          Rated
+                        </Button>
+                        <div className="flex gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3 h-3 ${i < (order.rating || 0) ? "fill-yellow-400 text-yellow-400" : "text-muted/30"}`}
+                              strokeWidth={0}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
               </div>
