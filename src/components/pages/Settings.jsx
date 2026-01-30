@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -8,12 +8,45 @@ import { Label } from "../ui/label";
 import { User, Mail, Phone, MapPin, Shield, Bell } from "lucide-react";
 import { useAppContext } from "@/lib/AppContext";
 import { toast } from "sonner";
-import { updateProfileImage } from "@/services/farmerService";
+import { updateProfileImage, updateFarmerProfile } from "@/services/farmerService";
 
 export function Settings() {
   const { currentUser, setCurrentUser } = useAppContext();
   const [activeTab, setActiveTab] = useState("profile");
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Profile form state
+  const [profileData, setProfileData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    addresss: "",
+    city: "",
+    state: "",
+    pincode: "",
+    farmSize: "",
+    farmType: ""
+  });
+
+  // Initialize profile data from currentUser
+  useEffect(() => {
+    if (currentUser) {
+      setProfileData({
+        firstName: currentUser.firstName || "",
+        lastName: currentUser.lastName || "",
+        email: currentUser.email || "",
+        phone: currentUser.phone || "",
+        addresss: currentUser.addresss || "",
+        city: currentUser.city || "",
+        state: currentUser.state || "",
+        pincode: currentUser.pincode || "",
+        farmSize: currentUser.farmSize || "",
+        farmType: currentUser.farmType || ""
+      });
+    }
+  }, [currentUser]);
 
   // States for interactive tabs
   const [securityData, setSecurityData] = useState({
@@ -40,6 +73,42 @@ export function Settings() {
 
   const toggleNotification = (key) => {
     setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      const updatedUser = await updateFarmerProfile(profileData);
+
+      // Update the context with the new user data
+      setCurrentUser(updatedUser);
+
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      toast.error("Failed to update profile. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    // Reset form data to current user data
+    if (currentUser) {
+      setProfileData({
+        firstName: currentUser.firstName || "",
+        lastName: currentUser.lastName || "",
+        email: currentUser.email || "",
+        phone: currentUser.phone || "",
+        addresss: currentUser.addresss || "",
+        city: currentUser.city || "",
+        state: currentUser.state || "",
+        pincode: currentUser.pincode || "",
+        farmSize: currentUser.farmSize || "",
+        farmType: currentUser.farmType || ""
+      });
+      toast.info("Changes discarded");
+    }
   };
 
   const handleImageChange = async (e) => {
@@ -135,48 +204,85 @@ export function Settings() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-bold">
                   <div className="space-y-2">
                     <Label>First Name</Label>
-                    <Input defaultValue={currentUser?.firstName || ""} />
+                    <Input
+                      value={profileData.firstName}
+                      onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Last Name</Label>
-                    <Input defaultValue={currentUser?.lastName || ""} />
+                    <Input
+                      value={profileData.lastName}
+                      onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Email</Label>
-                    <Input type="email" defaultValue={currentUser?.email || ""} disabled />
+                    <Input
+                      type="email"
+                      value={profileData.email}
+                      onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                      disabled
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Phone</Label>
-                    <Input type="tel" defaultValue={currentUser?.phone || ""} />
+                    <Input
+                      type="tel"
+                      value={profileData.phone}
+                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Address</Label>
-                    <Input defaultValue={currentUser?.addresss || ""} />
+                    <Input
+                      value={profileData.addresss}
+                      onChange={(e) => setProfileData({ ...profileData, addresss: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>City</Label>
-                    <Input defaultValue={currentUser?.city || ""} />
+                    <Input
+                      value={profileData.city}
+                      onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>State</Label>
-                    <Input defaultValue={currentUser?.state || ""} />
+                    <Input
+                      value={profileData.state}
+                      onChange={(e) => setProfileData({ ...profileData, state: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Pincode</Label>
-                    <Input defaultValue={currentUser?.pincode || ""} />
+                    <Input
+                      value={profileData.pincode}
+                      onChange={(e) => setProfileData({ ...profileData, pincode: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Farm Size</Label>
-                    <Input defaultValue={currentUser?.farmSize || ""} placeholder="e.g., 5 acres" />
+                    <Input
+                      value={profileData.farmSize}
+                      onChange={(e) => setProfileData({ ...profileData, farmSize: e.target.value })}
+                      placeholder="e.g., 5 acres"
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Farm Type</Label>
-                    <Input defaultValue={currentUser?.farmType || ""} placeholder="e.g., Organic, Mixed" />
+                    <Input
+                      value={profileData.farmType}
+                      onChange={(e) => setProfileData({ ...profileData, farmType: e.target.value })}
+                      placeholder="e.g., Organic, Mixed"
+                    />
                   </div>
                 </div>
                 <div className="flex justify-end pt-4 border-t gap-3">
-                  <Button variant="outline">Discard</Button>
-                  <Button onClick={() => toast.success("Profile updated!")}>Save Changes</Button>
+                  <Button variant="outline" onClick={handleDiscardChanges} disabled={saving}>Discard</Button>
+                  <Button onClick={handleSaveProfile} disabled={saving}>
+                    {saving ? "Saving..." : "Save Changes"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

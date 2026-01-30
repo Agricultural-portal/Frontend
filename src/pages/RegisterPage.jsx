@@ -12,7 +12,7 @@ export default function RegisterPage() {
                 toast.error("Please provide both first name and last name");
                 return;
             }
-            
+
             // Parse location into city and state
             const locationParts = data.location.split(',').map(part => part.trim());
             const city = locationParts[0] || '';
@@ -75,12 +75,28 @@ export default function RegisterPage() {
                 toast.success(message || "Registration successful! Please login.");
                 navigate("/login");
             } else {
-                const errorText = await response.text();
-                toast.error(`Registration failed: ${errorText || "Verify your details"}`);
+                // Try to parse as JSON first (for structured error responses)
+                let errorMessage = "Registration failed. Please verify your details.";
+                try {
+                    const errorData = await response.json();
+                    // Extract the message from the error response
+                    errorMessage = errorData.message || errorMessage;
+                } catch (e) {
+                    // If JSON parsing fails, try to get text
+                    try {
+                        const errorText = await response.text();
+                        if (errorText) {
+                            errorMessage = errorText;
+                        }
+                    } catch (textError) {
+                        // Use default message
+                    }
+                }
+                toast.error(errorMessage);
             }
         } catch (error) {
             console.error("Registration error", error);
-            toast.error("An error occurred during registration");
+            toast.error("An error occurred during registration. Please try again.");
         }
     };
 
