@@ -2,6 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { useAppContext } from "@/lib/AppContext";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Badge } from "../ui/badge";
+import WalletCard from "../farmer/WalletCard";
 import {
   Users,
   ShoppingBag,
@@ -9,6 +12,9 @@ import {
   Package,
   DollarSign,
   Activity,
+  Calendar,
+  Mail,
+  MapPin,
 } from "lucide-react";
 
 export function AdminDashboard() {
@@ -22,8 +28,32 @@ export function AdminDashboard() {
   const availableProducts = products.filter((p) => p.status === "Available" || p.status === "available").length;
   const totalOrders = orders.length;
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
-  const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const totalFarmerRevenue = farmers.reduce((sum, f) => sum + f.totalRevenue, 0);
+  
+  // Calculate farmer revenue from delivered orders
+  const deliveredOrders = orders.filter((o) => o.status === "DELIVERED" || o.status === "delivered");
+  const totalFarmerRevenue = deliveredOrders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+  
+  // Platform revenue is 5% of farmer revenue
+  const platformRevenue = totalFarmerRevenue * 0.05;
+
+  // Get recent farmers and buyers (sorted by join date)
+  const recentFarmers = [...farmers]
+    .sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate))
+    .slice(0, 5);
+  
+  const recentBuyers = [...buyers]
+    .sort((a, b) => new Date(b.joinDate) - new Date(a.joinDate))
+    .slice(0, 5);
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const getInitials = (name) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   const stats = [
     {
@@ -60,8 +90,8 @@ export function AdminDashboard() {
     },
     {
       title: "Platform Revenue",
-      value: `₹${totalRevenue.toLocaleString()}`,
-      description: "Gross GMV of platform",
+      value: `₹${platformRevenue.toLocaleString()}`,
+      description: "5% commission on delivered orders",
       icon: DollarSign,
       color: "text-chart-1",
       bgColor: "bg-chart-1/10",
@@ -69,7 +99,7 @@ export function AdminDashboard() {
     {
       title: "Farmer Revenue",
       value: `₹${totalFarmerRevenue.toLocaleString()}`,
-      description: "Direct earnings for farmers",
+      description: "Total from delivered orders",
       icon: TrendingUp,
       color: "text-chart-2",
       bgColor: "bg-chart-2/10",
@@ -107,53 +137,104 @@ export function AdminDashboard() {
         })}
       </div>
 
+      {/* Wallet Card */}
+      <WalletCard />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold">Top Performing Farmers</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Users className="w-5 h-5 text-chart-1" />
+              Recent Farmers
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Newest farmer registrations</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {farmers.slice(0, 5).map((farmer) => (
-                <div
-                  key={farmer.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex flex-col">
-                    <p className="font-bold">{farmer.name}</p>
-                    <p className="text-xs text-muted-foreground">{farmer.location}</p>
+            <div className="space-y-3">
+              {recentFarmers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No farmers registered yet</p>
+              ) : (
+                recentFarmers.map((farmer) => (
+                  <div
+                    key={farmer.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-muted/40 to-muted/20 hover:from-muted/60 hover:to-muted/40 transition-all duration-200 border border-border/50"
+                  >
+                    <Avatar className="h-12 w-12 border-2 border-chart-1/20">
+                      <AvatarImage src={farmer.profileImageUrl} alt={farmer.name} />
+                      <AvatarFallback className="bg-chart-1/10 text-chart-1 font-bold">
+                        {getInitials(farmer.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{farmer.name}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">{farmer.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant={farmer.status === "active" ? "default" : "secondary"} className="text-xs">
+                        {farmer.status}
+                      </Badge>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatDate(farmer.joinDate)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-primary">₹{farmer.totalRevenue.toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-tight font-bold">{farmer.totalProducts} products listed</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg font-bold">Recent Active Buyers</CardTitle>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <ShoppingBag className="w-5 h-5 text-chart-2" />
+              Recent Buyers
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">Newest buyer registrations</p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {buyers.slice(0, 5).map((buyer) => (
-                <div
-                  key={buyer.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex flex-col">
-                    <p className="font-bold">{buyer.name}</p>
-                    <p className="text-xs text-muted-foreground">{buyer.location}</p>
+            <div className="space-y-3">
+              {recentBuyers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No buyers registered yet</p>
+              ) : (
+                recentBuyers.map((buyer) => (
+                  <div
+                    key={buyer.id}
+                    className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-muted/40 to-muted/20 hover:from-muted/60 hover:to-muted/40 transition-all duration-200 border border-border/50"
+                  >
+                    <Avatar className="h-12 w-12 border-2 border-chart-2/20">
+                      <AvatarImage src={buyer.profileImageUrl} alt={buyer.name} />
+                      <AvatarFallback className="bg-chart-2/10 text-chart-2 font-bold">
+                        {getInitials(buyer.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{buyer.name}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="w-3 h-3" />
+                          <span className="truncate">{buyer.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant={buyer.status === "active" ? "default" : "secondary"} className="text-xs">
+                        {buyer.status}
+                      </Badge>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatDate(buyer.joinDate)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-primary">₹{buyer.totalSpent.toLocaleString()}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-tight font-bold">{buyer.totalOrders} total orders</p>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

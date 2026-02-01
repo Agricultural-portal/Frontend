@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppContext } from "@/lib/AppContext";
-import { Bell, X } from "lucide-react";
+import { Bell, X, Wallet } from "lucide-react";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Badge } from "../ui/badge";
@@ -21,12 +22,25 @@ import {
   PopoverTrigger,
 } from "../ui/popover";
 import { ScrollArea } from "../ui/scroll-area";
+import { toast } from "sonner";
 
 export function AdminNavbar({ onLogout }) {
-  const { notifications, markNotificationAsRead, deleteNotification } = useAppContext();
+  const navigate = useNavigate();
+  const { notifications, notificationUnreadCount, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, logout, walletBalance } = useAppContext();
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const handleLogout = () => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate("/login");
+    if (onLogout) onLogout();
+  };
+
+  const unreadCount = notificationUnreadCount || 0;
+  
+  useEffect(() => {
+    console.log('[AdminNavbar] Render - notificationUnreadCount:', notificationUnreadCount, 'unreadCount:', unreadCount);
+  }, [notificationUnreadCount, unreadCount]);
 
   const handleNotificationClick = (notificationId) => {
     markNotificationAsRead(notificationId);
@@ -38,9 +52,7 @@ export function AdminNavbar({ onLogout }) {
   };
 
   const handleClearAll = () => {
-    notifications.forEach((notification) => {
-      deleteNotification(notification.id);
-    });
+    markAllNotificationsAsRead();
   };
 
   const getNotificationIcon = (type) => {
@@ -62,6 +74,14 @@ export function AdminNavbar({ onLogout }) {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Wallet Balance */}
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
+          <Wallet className="w-4 h-4 text-green-600 dark:text-green-400" />
+          <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+            ₹{walletBalance?.toLocaleString('en-IN') || '0'}
+          </span>
+        </div>
+
         <Popover open={showNotifications} onOpenChange={setShowNotifications}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative transition-transform hover:scale-110">
@@ -78,7 +98,7 @@ export function AdminNavbar({ onLogout }) {
               <CardHeader className="bg-primary/5 border-b py-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base font-bold">Notifications</CardTitle>
-                  {notifications.length > 0 && (
+                  {notifications.filter(n => !n.read).length > 0 && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -92,14 +112,14 @@ export function AdminNavbar({ onLogout }) {
               </CardHeader>
               <CardContent className="p-0">
                 <ScrollArea className="h-[400px]">
-                  {notifications.length === 0 ? (
+                  {notifications.filter(n => !n.read).length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center">
                       <Bell className="w-16 h-16 text-muted-foreground/20 mb-4" />
                       <p className="text-sm font-medium text-muted-foreground">All caught up!</p>
                     </div>
                   ) : (
                     <div className="divide-y divide-border/50">
-                      {notifications.map((notification) => (
+                      {notifications.filter(n => !n.read).map((notification) => (
                         <div
                           key={notification.id}
                           className={`p-4 hover:bg-accent/50 cursor-pointer transition-colors relative group ${!notification.read ? "bg-primary/5 shadow-inner" : ""
@@ -152,12 +172,24 @@ export function AdminNavbar({ onLogout }) {
           <DropdownMenuContent align="end" className="w-56 mt-2 rounded-xl shadow-xl border-none p-1">
             <DropdownMenuLabel className="px-3 py-2 font-bold opacity-70">My Account</DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-border/50" />
-            <DropdownMenuItem className="rounded-lg px-3 py-2 cursor-pointer gap-2"><div className="w-1 h-4 bg-primary rounded-full" />Profile Settings</DropdownMenuItem>
-            <DropdownMenuItem className="rounded-lg px-3 py-2 cursor-pointer gap-2"><div className="w-1 h-4 bg-chart-4 rounded-full" />System Logs</DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => navigate("/admin/settings?tab=profile")} 
+              className="rounded-lg px-3 py-2 cursor-pointer gap-2"
+            >
+              <div className="w-1 h-4 bg-primary rounded-full" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => navigate("/admin/settings?tab=settings")} 
+              className="rounded-lg px-3 py-2 cursor-pointer gap-2"
+            >
+              <div className="w-1 h-4 bg-chart-4 rounded-full" />
+              System Settings
+            </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border/50" />
-            <DropdownMenuItem onClick={onLogout} className="rounded-lg px-3 py-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive font-bold gap-2">
+            <DropdownMenuItem onClick={handleLogout} className="rounded-lg px-3 py-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive font-bold gap-2">
               <X className="w-4 h-4" />
-              Logout Session
+              Logout
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

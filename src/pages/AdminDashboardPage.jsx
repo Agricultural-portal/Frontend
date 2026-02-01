@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, Suspense, lazy } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "@/lib/AppContext";
@@ -12,6 +10,7 @@ const ManageFarmers = lazy(() => import("@/components/admin/ManageFarmers").then
 const ManageBuyers = lazy(() => import("@/components/admin/ManageBuyers").then(m => ({ default: m.ManageBuyers })));
 const AllOrders = lazy(() => import("@/components/admin/AllOrders").then(m => ({ default: m.AllOrders })));
 const AdminSchemes = lazy(() => import("@/components/admin/AdminSchemes").then(m => ({ default: m.AdminSchemes })));
+const Notifications = lazy(() => import("@/components/pages/Notifications").then(m => ({ default: m.Notifications })));
 const AdminSettings = lazy(() => import("@/components/admin/AdminSettings").then(m => ({ default: m.AdminSettings })));
 
 export default function AdminDashboardPage() {
@@ -37,6 +36,7 @@ export default function AdminDashboardPage() {
             case "buyers": return <ManageBuyers />;
             case "orders": return <AllOrders />;
             case "schemes": return <AdminSchemes />;
+            case "notifications": return <Notifications />;
             case "settings": return <AdminSettings />;
             default: return <AdminDashboard />;
         }

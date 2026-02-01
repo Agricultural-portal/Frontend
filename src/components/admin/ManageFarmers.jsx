@@ -7,6 +7,7 @@ import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
   Table,
   TableBody,
@@ -44,12 +45,17 @@ export function ManageFarmers() {
   const [selectedFarmer, setSelectedFarmer] = useState(null);
 
   const [formData, setFormData] = useState({
-    name: "",
+    firstName: "",
+    lastName: "",
     email: "",
     phone: "",
-    location: "",
+    password: "",
+    city: "",
+    state: "",
+    pincode: "",
+    addresss: "",
     farmSize: "",
-    status: "active",
+    farmType: "MIXED",
   });
 
   const filteredFarmers = farmers.filter((farmer) => {
@@ -61,60 +67,139 @@ export function ManageFarmers() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddFarmer = () => {
-    if (!formData.name || !formData.email || !formData.phone || !formData.location || !formData.farmSize) {
+  const handleAddFarmer = async () => {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.password || !formData.farmSize) {
       toast.error("Please fill all required fields");
       return;
     }
 
-    addFarmer({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      location: formData.location,
-      farmSize: formData.farmSize,
-      joinedDate: new Date().toISOString().split("T")[0],
-      totalProducts: 0,
-      totalRevenue: 0,
-      status: formData.status,
-    });
+    try {
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        addresss: formData.addresss || '',
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode || '',
+        farmSize: parseFloat(formData.farmSize) || 0,
+        farmType: formData.farmType,
+        password: formData.password
+      };
 
-    toast.success("Farmer added successfully!");
-    setShowAddDialog(false);
-    resetForm();
+      const response = await fetch("http://localhost:8080/api/auth/signup/farmer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        toast.success("Farmer registered successfully!");
+        setShowAddDialog(false);
+        resetForm();
+        // Refresh farmers list
+        window.location.reload();
+      } else {
+        const errorText = await response.text();
+        toast.error(errorText || "Failed to register farmer");
+      }
+    } catch (error) {
+      console.error("Error adding farmer:", error);
+      toast.error("An error occurred. Please try again.");
+    }
   };
 
-  const handleEditFarmer = () => {
-    if (!selectedFarmer || !formData.name || !formData.email || !formData.phone || !formData.location || !formData.farmSize) {
+  const handleEditFarmer = async () => {
+    if (!selectedFarmer || !formData.firstName || !formData.lastName || !formData.email || !formData.phone) {
       toast.error("Please fill all required fields");
       return;
     }
 
-    updateFarmer(selectedFarmer.id, {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      location: formData.location,
-      farmSize: formData.farmSize,
-      status: formData.status,
-    });
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        addresss: formData.addresss || '',
+        city: formData.city,
+        state: formData.state,
+        pincode: formData.pincode,
+        farmSize: parseFloat(formData.farmSize) || 0,
+        farmType: formData.farmType
+      };
 
-    toast.success("Farmer updated successfully!");
-    setShowEditDialog(false);
-    resetForm();
+      const response = await fetch(`http://localhost:8080/api/admin/users/${selectedFarmer.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        toast.success("Farmer updated successfully!");
+        setShowEditDialog(false);
+        resetForm();
+        window.location.reload();
+      } else {
+        const errorText = await response.text();
+        toast.error(errorText || "Failed to update farmer");
+      }
+    } catch (error) {
+      console.error("Error updating farmer:", error);
+      toast.error("An error occurred. Please try again.");
+    }
   };
 
-  const handleDeleteFarmer = (id, name) => {
+  const handleDeleteFarmer = async (id, name) => {
     if (window.confirm(`Are you sure you want to delete ${name}?`)) {
-      deleteFarmer(id);
-      toast.success("Farmer deleted successfully!");
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:8080/api/admin/users/${id}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          toast.success("Farmer deleted successfully!");
+          window.location.reload();
+        } else {
+          toast.error("Failed to delete farmer");
+        }
+      } catch (error) {
+        console.error("Error deleting farmer:", error);
+        toast.error("An error occurred. Please try again.");
+      }
     }
   };
 
-  const handleStatusToggle = (farmer) => {
-    const newStatus = farmer.status === "active" ? "inactive" : "active";
-    updateFarmer(farmer.id, { status: newStatus });
-    toast.success(`Farmer ${newStatus === "active" ? "activated" : "deactivated"} successfully!`);
+  const handleStatusToggle = async (farmer) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/admin/users/${farmer.id}/status`, {
+        method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const newStatus = farmer.status === "active" ? "suspended" : "active";
+        toast.success(`Farmer ${newStatus === "active" ? "activated" : "deactivated"} successfully!`);
+        window.location.reload();
+      } else {
+        toast.error("Failed to update status");
+      }
+    } catch (error) {
+      console.error("Error toggling status:", error);
+      toast.error("An error occurred. Please try again.");
+    }
   };
 
   const handleViewDetails = (farmer) => {
@@ -124,13 +209,20 @@ export function ManageFarmers() {
 
   const handleEditClick = (farmer) => {
     setSelectedFarmer(farmer);
+    const nameParts = farmer.name.split(' ');
+    const locationParts = farmer.location ? farmer.location.split(',').map(s => s.trim()) : ['', ''];
     setFormData({
-      name: farmer.name,
+      firstName: nameParts[0] || '',
+      lastName: nameParts.slice(1).join(' ') || '',
       email: farmer.email,
       phone: farmer.phone,
-      location: farmer.location,
-      farmSize: farmer.farmSize,
-      status: farmer.status,
+      city: locationParts[0] || '',
+      state: locationParts[1] || '',
+      pincode: '',
+      addresss: farmer.location || '',
+      farmSize: farmer.farmSize || '',
+      farmType: 'MIXED',
+      password: ''
     });
     setShowEditDialog(true);
   };
@@ -142,12 +234,17 @@ export function ManageFarmers() {
 
   const resetForm = () => {
     setFormData({
-      name: "",
+      firstName: "",
+      lastName: "",
       email: "",
       phone: "",
-      location: "",
+      password: "",
+      city: "",
+      state: "",
+      pincode: "",
+      addresss: "",
       farmSize: "",
-      status: "active",
+      farmType: "MIXED",
     });
     setSelectedFarmer(null);
   };
@@ -250,9 +347,12 @@ export function ManageFarmers() {
                   <TableRow key={farmer.id} className="cursor-default hover:bg-muted/5 transition-colors">
                     <TableCell className="py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shadow-inner">
-                          {farmer.name.charAt(0)}
-                        </div>
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={farmer.profileImageUrl} alt={farmer.name} />
+                          <AvatarFallback className="bg-primary/10 text-primary font-bold">
+                            {farmer.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
                         <div>
                           <p className="font-bold">{farmer.name}</p>
                           <p className="text-xs text-muted-foreground italic">{farmer.email}</p>
@@ -324,23 +424,286 @@ export function ManageFarmers() {
 
       {/* Dialogs updated to avoid TS types */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-md border-none shadow-2xl rounded-2xl overflow-hidden p-0">
+        <DialogContent className="max-w-2xl border-none shadow-2xl rounded-2xl overflow-hidden p-0 max-h-[90vh] overflow-y-auto">
           <div className="bg-primary p-6 text-primary-foreground">
             <DialogTitle className="text-xl font-bold">Onboard New Farmer</DialogTitle>
             <DialogDescription className="text-primary-foreground/70">Create a verified credentials profile</DialogDescription>
           </div>
           <div className="p-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase">Full Name</Label><Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="John Doe" /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase">Email Address</Label><Input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="john@farm.com" /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase">Phone Number</Label><Input value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+91..." /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase">Physical Location</Label><Input value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="City, State" /></div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">First Name *</Label>
+                <Input 
+                  value={formData.firstName} 
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} 
+                  placeholder="John" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Last Name *</Label>
+                <Input 
+                  value={formData.lastName} 
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} 
+                  placeholder="Doe" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Email Address *</Label>
+                <Input 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                  placeholder="john@farm.com" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Phone Number *</Label>
+                <Input 
+                  value={formData.phone} 
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+                  placeholder="+91 0000000000" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">City</Label>
+                <Input 
+                  value={formData.city} 
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })} 
+                  placeholder="Mumbai" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">State</Label>
+                <Input 
+                  value={formData.state} 
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })} 
+                  placeholder="Maharashtra" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Pincode</Label>
+                <Input 
+                  value={formData.pincode} 
+                  onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} 
+                  placeholder="400001" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Farm Size (acres) *</Label>
+                <Input 
+                  type="number"
+                  value={formData.farmSize} 
+                  onChange={(e) => setFormData({ ...formData, farmSize: e.target.value })} 
+                  placeholder="e.g. 5" 
+                />
+              </div>
             </div>
-            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase">Total Farm Area</Label><Input value={formData.farmSize} onChange={(e) => setFormData({ ...formData, farmSize: e.target.value })} placeholder="e.g. 15 acres" /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase">Address</Label>
+              <Input 
+                value={formData.addresss} 
+                onChange={(e) => setFormData({ ...formData, addresss: e.target.value })} 
+                placeholder="Full address" 
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase">Password *</Label>
+              <Input 
+                type="password"
+                value={formData.password} 
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })} 
+                placeholder="••••••••" 
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase">Farm Type</Label>
+              <Select value={formData.farmType} onValueChange={(value) => setFormData({ ...formData, farmType: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select farm type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MIXED">Mixed Farming</SelectItem>
+                  <SelectItem value="ORGANIC">Organic</SelectItem>
+                  <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                  <SelectItem value="SUBSISTENCE">Subsistence</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="p-4 bg-muted/50 flex justify-end gap-2 px-6">
-            <Button variant="ghost" onClick={() => setShowAddDialog(false)}>Discard</Button>
-            <Button onClick={handleAddFarmer} className="shadow-lg px-8">Save Profile</Button>
+            <Button variant="ghost" onClick={() => { setShowAddDialog(false); resetForm(); }}>Discard</Button>
+            <Button onClick={handleAddFarmer} className="shadow-lg px-8">Register Farmer</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Farmer Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl border-none shadow-2xl rounded-2xl overflow-hidden p-0 max-h-[90vh] overflow-y-auto">
+          <div className="bg-blue-600 p-6 text-white">
+            <DialogTitle className="text-xl font-bold">Edit Farmer Profile</DialogTitle>
+            <DialogDescription className="text-white/70">Update farmer information</DialogDescription>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">First Name *</Label>
+                <Input 
+                  value={formData.firstName} 
+                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} 
+                  placeholder="John" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Last Name *</Label>
+                <Input 
+                  value={formData.lastName} 
+                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} 
+                  placeholder="Doe" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Email Address *</Label>
+                <Input 
+                  type="email" 
+                  value={formData.email} 
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
+                  placeholder="john@farm.com" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Phone Number *</Label>
+                <Input 
+                  value={formData.phone} 
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+                  placeholder="+91 0000000000" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">City</Label>
+                <Input 
+                  value={formData.city} 
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })} 
+                  placeholder="Mumbai" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">State</Label>
+                <Input 
+                  value={formData.state} 
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })} 
+                  placeholder="Maharashtra" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Pincode</Label>
+                <Input 
+                  value={formData.pincode} 
+                  onChange={(e) => setFormData({ ...formData, pincode: e.target.value })} 
+                  placeholder="400001" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase">Farm Size (acres)</Label>
+                <Input 
+                  type="number"
+                  value={formData.farmSize} 
+                  onChange={(e) => setFormData({ ...formData, farmSize: e.target.value })} 
+                  placeholder="e.g. 5" 
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase">Address</Label>
+              <Input 
+                value={formData.addresss} 
+                onChange={(e) => setFormData({ ...formData, addresss: e.target.value })} 
+                placeholder="Full address" 
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold uppercase">Farm Type</Label>
+              <Select value={formData.farmType} onValueChange={(value) => setFormData({ ...formData, farmType: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select farm type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MIXED">Mixed Farming</SelectItem>
+                  <SelectItem value="ORGANIC">Organic</SelectItem>
+                  <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                  <SelectItem value="SUBSISTENCE">Subsistence</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="p-4 bg-muted/50 flex justify-end gap-2 px-6">
+            <Button variant="ghost" onClick={() => { setShowEditDialog(false); resetForm(); }}>Cancel</Button>
+            <Button onClick={handleEditFarmer} className="shadow-lg px-8">Update Profile</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Farmer Details Dialog */}
+      <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
+        <DialogContent className="max-w-2xl border-none shadow-2xl rounded-2xl overflow-hidden p-0">
+          <div className="bg-green-600 p-6 text-white">
+            <DialogTitle className="text-xl font-bold">Farmer Profile Details</DialogTitle>
+            <DialogDescription className="text-white/70">Complete information about the farmer</DialogDescription>
+          </div>
+          {selectedFarmer && (
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Full Name</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.name}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Email</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.email}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Phone</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.phone}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Location</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.location}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Farm Size</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.farmSize || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Farm Type</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.farmType || 'N/A'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Status</Label>
+                  <Badge className={selectedFarmer.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}>
+                    {selectedFarmer.status?.toUpperCase()}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Total Products</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.totalProducts || 0}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Total Revenue</Label>
+                  <p className="text-base font-semibold">₹{selectedFarmer.totalRevenue?.toLocaleString() || 0}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Rating</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.rating || getAverageRating(selectedFarmer.id)}/5</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Join Date</Label>
+                  <p className="text-base font-semibold">{selectedFarmer.joinDate || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="p-4 bg-muted/50 flex justify-end gap-2 px-6">
+            <Button onClick={() => { setShowDetailsDialog(false); setSelectedFarmer(null); }}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
