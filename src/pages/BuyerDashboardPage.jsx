@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, Suspense, lazy } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "@/lib/AppContext";
@@ -15,7 +13,6 @@ const ConnectFarmers = lazy(() => import("@/components/buyer/ConnectFarmers").th
 const Favorites = lazy(() => import("@/components/buyer/Favorites").then(m => ({ default: m.Favorites })));
 const ProductDetail = lazy(() => import("@/components/buyer/ProductDetail").then(m => ({ default: m.ProductDetail })));
 const BuyerProfile = lazy(() => import("@/components/buyer/BuyerProfile").then(m => ({ default: m.BuyerProfile })));
-const Notifications = lazy(() => import("@/components/pages/Notifications").then(m => ({ default: m.Notifications })));
 const Settings = lazy(() => import("@/components/pages/Settings").then(m => ({ default: m.Settings })));
 
 export default function BuyerDashboardPage() {
@@ -46,7 +43,6 @@ export default function BuyerDashboardPage() {
             case "cart": return <MyCart />;
             case "orders": return <MyOrders />;
             case "favorites": return <Favorites onNavigate={handleNavigate} />;
-            case "notifications": return <Notifications />;
             case "settings": return <Settings />;
             case "profile": return <BuyerProfile />;
             default: return <BuyerDashboard onNavigate={handleNavigate} />;

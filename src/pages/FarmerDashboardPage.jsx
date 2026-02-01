@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "@/lib/AppContext";
 import { Sidebar } from "@/components/Sidebar";
 import { Navbar } from "@/components/Navbar";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Lazy load day components
 const Dashboard = lazy(() => import("@/components/pages/Dashboard").then(m => ({ default: m.Dashboard })));
@@ -13,6 +14,7 @@ const Products = lazy(() => import("@/components/pages/Products").then(m => ({ d
 const Weather = lazy(() => import("@/components/pages/Weather").then(m => ({ default: m.Weather })));
 const GovernmentSchemes = lazy(() => import("@/components/pages/GovernmentSchemes").then(m => ({ default: m.GovernmentSchemes })));
 const Ratings = lazy(() => import("@/components/pages/Ratings").then(m => ({ default: m.Ratings })));
+const Notifications = lazy(() => import("@/components/pages/Notifications").then(m => ({ default: m.Notifications })));
 const Settings = lazy(() => import("@/components/pages/Settings").then(m => ({ default: m.Settings })));
 
 export default function FarmerDashboardPage() {
@@ -42,26 +44,36 @@ export default function FarmerDashboardPage() {
             case "weather": return <Weather />;
             case "schemes": return <GovernmentSchemes />;
             case "ratings": return <Ratings />;
+            case "notifications": return <Notifications />;
             case "settings": return <Settings />;
             default: return <Dashboard />;
         }
     };
 
     return (
-        <div className="flex h-screen overflow-hidden bg-background">
-            <Sidebar
-                currentPage={currentPage}
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
-            />
-            <div className="flex-1 flex flex-col overflow-hidden">
-                <Navbar onNavigate={handleNavigate} />
-                <main className="flex-1 overflow-auto bg-slate-50/50 dark:bg-transparent">
-                    <Suspense fallback={<div className="p-6">Loading...</div>}>
-                        {renderPage()}
-                    </Suspense>
-                </main>
+        <ErrorBoundary>
+            <div className="flex h-screen overflow-hidden bg-background">
+                <Sidebar
+                    currentPage={currentPage}
+                    onNavigate={handleNavigate}
+                    onLogout={handleLogout}
+                />
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    <Navbar onNavigate={handleNavigate} />
+                    <main className="flex-1 overflow-auto bg-slate-50/50 dark:bg-transparent">
+                        <Suspense fallback={
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                                    <p className="text-slate-600">Loading...</p>
+                                </div>
+                            </div>
+                        }>
+                            {renderPage()}
+                        </Suspense>
+                    </main>
+                </div>
             </div>
-        </div>
+        </ErrorBoundary>
     );
 }

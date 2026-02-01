@@ -8,13 +8,19 @@ import { TaskViewDialog } from "../farmer/TaskViewDialog";
 import { TaskFilters } from "../farmer/TaskFilters";
 
 export function Tasks() {
-  const { currentUser, cropCycles } = useAppContext();
+  const context = useAppContext();
+  if (!context) {
+    return <div className="p-6 text-center text-red-600">Error: App context not available</div>;
+  }
+  
+  const { currentUser, cropCycles = [] } = context;
   const farmerId = currentUser?.id || 1; // Fallback to 1 for dev if not logged in
   const [selectedTab, setSelectedTab] = useState("All Tasks");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [allTasks, setAllTasks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchTasks();
@@ -22,6 +28,7 @@ export function Tasks() {
 
   const fetchTasks = async () => {
     try {
+      setIsLoading(true);
       const data = await taskService.getAllTasks();
       const mappedTasks = data.map(t => ({
         ...t,
@@ -32,6 +39,9 @@ export function Tasks() {
     } catch (error) {
       console.error("Error fetching tasks:", error);
       toast.error("Failed to load tasks");
+      setAllTasks([]); // Set empty array on error
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -101,8 +111,6 @@ export function Tasks() {
       startDate: formData.startDate || new Date().toISOString().split('T')[0],
       dueDate: formData.dueDate,
       priority: formData.priority,
-      priority: formData.priority,
-      // estimatedCost: parseFloat(formData.cost) || 0,
       expense: parseFloat(formData.cost) || 0,
       cropCycleId: formData.cropCycle ? parseInt(formData.cropCycle) : null,
       status: "pending"
@@ -191,21 +199,28 @@ export function Tasks() {
 
       {/* Task List */}
       <div className="space-y-4">
-        {filteredTasks.map(task => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            onView={() => setViewingTask(task)}
-            onEdit={handleEditClick}
-            onComplete={handleMarkComplete}
-            onDelete={handleDeleteTask}
-          />
-        ))}
-
-        {filteredTasks.length === 0 && (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+              <p className="text-slate-600">Loading tasks...</p>
+            </div>
+          </div>
+        ) : filteredTasks.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
             <p>No tasks found matching your filters.</p>
           </div>
+        ) : (
+          filteredTasks.map(task => (
+            <TaskCard
+              key={task.id}
+              task={task}
+              onView={() => setViewingTask(task)}
+              onEdit={handleEditClick}
+              onComplete={handleMarkComplete}
+              onDelete={handleDeleteTask}
+            />
+          ))
         )}
       </div>
 

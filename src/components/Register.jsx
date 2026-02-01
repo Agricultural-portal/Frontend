@@ -22,8 +22,12 @@ export function Register({ onRegisterSuccess, onSwitchToLogin }) {
     phone: "",
     password: "",
     confirmPassword: "",
-    location: "",
+    addresss: "",
+    city: "",
+    state: "",
+    pincode: "",
     farmSize: "",
+    farmType: "MIXED",
     businessName: "",
     businessType: "",
   });
@@ -141,15 +145,45 @@ export function Register({ onRegisterSuccess, onSwitchToLogin }) {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="addresss">Address</Label>
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
-                    id="location"
-                    placeholder="City, State"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange("location", e.target.value)}
+                    id="addresss"
+                    placeholder="Street address"
+                    value={formData.addresss}
+                    onChange={(e) => handleInputChange("addresss", e.target.value)}
                     className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    placeholder="City"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange("city", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    placeholder="State"
+                    value={formData.state}
+                    onChange={(e) => handleInputChange("state", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="pincode">Pincode</Label>
+                  <Input
+                    id="pincode"
+                    placeholder="Pincode"
+                    value={formData.pincode}
+                    onChange={(e) => handleInputChange("pincode", e.target.value)}
                   />
                 </div>
               </div>
@@ -167,6 +201,20 @@ export function Register({ onRegisterSuccess, onSwitchToLogin }) {
                         value={formData.farmSize}
                         onChange={(e) => handleInputChange("farmSize", e.target.value)}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="farmType">Farm Type</Label>
+                      <Select value={formData.farmType} onValueChange={(value) => handleInputChange("farmType", value)}>
+                        <SelectTrigger id="farmType">
+                          <SelectValue placeholder="Select farm type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MIXED">Mixed Farming</SelectItem>
+                          <SelectItem value="ORGANIC">Organic</SelectItem>
+                          <SelectItem value="COMMERCIAL">Commercial</SelectItem>
+                          <SelectItem value="SUBSISTENCE">Subsistence</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>

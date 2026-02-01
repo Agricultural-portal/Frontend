@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, Bell, CloudSun, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Bell, CloudSun, X, Wallet } from "lucide-react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -20,10 +20,14 @@ import {
 import { useAppContext } from "@/lib/AppContext";
 
 export function Navbar({ onNavigate }) {
-  const { notifications, markNotificationAsRead, deleteNotification, currentUser } = useAppContext();
+  const { notifications, notificationUnreadCount, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, currentUser, currentWeather, walletBalance } = useAppContext();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = notificationUnreadCount || 0;
+  
+  useEffect(() => {
+    console.log('[Navbar] Render - notificationUnreadCount:', notificationUnreadCount, 'unreadCount:', unreadCount);
+  }, [notificationUnreadCount, unreadCount]);
 
   const handleNotificationClick = (notification) => {
     if (!notification.read) {
@@ -37,7 +41,7 @@ export function Navbar({ onNavigate }) {
   };
 
   const getNotificationIcon = (type) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case "task":
         return "📋";
       case "weather":
@@ -48,6 +52,14 @@ export function Navbar({ onNavigate }) {
         return "📦";
       case "system":
         return "⚙️";
+      case "scheme":
+        return "🏛️";
+      case "product":
+        return "🌾";
+      case "rating":
+        return "⭐";
+      case "user":
+        return "👤";
       default:
         return "🔔";
     }
@@ -68,12 +80,27 @@ export function Navbar({ onNavigate }) {
 
       {/* Right Side */}
       <div className="flex items-center gap-4">
+        {/* Wallet Balance */}
+        <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-950 rounded-xl border border-green-200 dark:border-green-800">
+          <Wallet className="w-4 h-4 text-green-600 dark:text-green-400" />
+          <div>
+            <p className="text-xs text-muted-foreground">Wallet</p>
+            <p className="text-sm font-semibold text-green-600 dark:text-green-400">
+              ₹{walletBalance?.toLocaleString('en-IN') || '0'}
+            </p>
+          </div>
+        </div>
+
         {/* Weather Summary */}
         <div className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-xl">
           <CloudSun className="w-5 h-5 text-primary" />
           <div>
-            <p className="text-xs text-muted-foreground">Punjab, India</p>
-            <p className="text-sm">28°C</p>
+            <p className="text-xs text-muted-foreground">
+              {currentWeather?.name || currentUser?.city || 'Punjab'}, {currentWeather?.sys?.country || 'India'}
+            </p>
+            <p className="text-sm">
+              {currentWeather?.main?.temp ? `${Math.round(currentWeather.main.temp)}°C` : '28°C'}
+            </p>
           </div>
         </div>
 
@@ -93,20 +120,35 @@ export function Navbar({ onNavigate }) {
             <div className="p-4 border-b">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Notifications</h3>
-                {unreadCount > 0 && (
-                  <Badge variant="secondary">{unreadCount} new</Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <>
+                      <Badge variant="secondary">{unreadCount} new</Badge>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAllNotificationsAsRead();
+                        }}
+                      >
+                        Clear all
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <div className="max-h-[400px] overflow-y-auto">
-              {notifications.length === 0 ? (
+              {notifications.filter(n => !n.read).length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground">
                   <Bell className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No notifications</p>
+                  <p>No new notifications</p>
                 </div>
               ) : (
                 <div className="divide-y border-t">
-                  {notifications.map((notification) => (
+                  {notifications.filter(n => !n.read).map((notification) => (
                     <div
                       key={notification.id}
                       className={`p-4 hover:bg-secondary cursor-pointer transition-colors ${!notification.read ? "bg-primary/5" : ""

@@ -4,6 +4,7 @@ import React from 'react';
 import { Package, ShoppingCart, TrendingUp, Heart, ArrowRight } from 'lucide-react';
 import { useAppContext } from "@/lib/AppContext";
 import ProductCard from '../ProductCard';
+import WalletCard from '../farmer/WalletCard';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -91,27 +92,32 @@ export function BuyerDashboard({ onNavigate }) {
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statsCards.map((stat, index) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={index} className="border-none shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                    <h2 className={`text-2xl font-bold ${stat.color}`}>{stat.value}</h2>
-                    <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
+      {/* Stats Cards and Wallet */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {statsCards.map((stat, index) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={index} className="border-none shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                      <h2 className={`text-2xl font-bold ${stat.color}`}>{stat.value}</h2>
+                      <p className="text-xs text-muted-foreground">{stat.subtitle}</p>
+                    </div>
+                    <div className={`p-3 rounded-xl ${stat.bgColor}`}>
+                      <Icon className={`w-6 h-6 ${stat.color}`} />
+                    </div>
                   </div>
-                  <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                    <Icon className={`w-6 h-6 ${stat.color}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <div className="lg:row-span-1">
+          <WalletCard />
+        </div>
       </div>
 
       {/* Featured Products */}

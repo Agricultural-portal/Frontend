@@ -40,11 +40,15 @@ export const orderService = {
     },
 
     updateOrderStatus: async (orderId, status) => {
-        const response = await fetch(`${API_URL}/${orderId}/status?status=${status}`, {
-            method: "PATCH",
+        const response = await fetch(`http://localhost:8080/api/farmer/orders/${orderId}/status?status=${status}`, {
+            method: "PUT",
             headers: getAuthHeaders(),
         });
-        if (!response.ok) throw new Error("Failed to update order status");
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to update order status");
+        }
+        return response.json();
     },
 
     updatePaymentStatus: async (orderId, status) => {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
     mockProducts,
     mockOrders,
@@ -13,6 +13,9 @@ import {
 } from "./mockData";
 import { toast } from "sonner";
 import { cropCycleService } from "@/services/cropCycleService";
+import notificationService from "@/services/notificationService";
+import weatherService from "@/services/weatherService";
+import walletService from "@/services/walletService";
 
 const AppContext = createContext(undefined);
 
@@ -38,6 +41,7 @@ export function AppProvider({ children }) {
     const [finances, setFinances] = useState([]);
     const [schemes, setSchemes] = useState([]);
     const [notifications, setNotifications] = useState([]);
+    const [notificationUnreadCount, setNotificationUnreadCount] = useState(0);
     const [buyers, setBuyers] = useState([]);
     const [farmers, setFarmers] = useState([]);
     const [farmerRatings, setFarmerRatings] = useState([]);
@@ -47,6 +51,8 @@ export function AppProvider({ children }) {
         return [];
     });
     const [favorites, setFavorites] = useState([]);
+    const [currentWeather, setCurrentWeather] = useState(null);
+    const [walletBalance, setWalletBalance] = useState(0);
     const [currentUser, setCurrentUser] = useState(() => {
         // Try to restore user from localStorage on app start
         try {
@@ -132,7 +138,6 @@ export function AppProvider({ children }) {
                         image: p.imageUrl || getDefaultProductImage(p.category),
                         farmer: p.farmerName || "Unknown Farmer",
                         farmerRating: p.farmerRating ? p.farmerRating.toString() : "0",
-                        status: p.stock > 0 ? "Available" : "Out of Stock",
                         status: p.stock > 0 ? "Available" : "Out of Stock",
                         rating: p.averageRating ? p.averageRating.toString() : "0",
                         reviews: p.totalRatings || 0,
@@ -330,29 +335,54 @@ export function AppProvider({ children }) {
         if (!currentUser?.token) return;
 
         try {
-            const res = await fetch(`${backendUrl}/buyer/orders`, {
+            // Admin fetches all orders, Buyer fetches their orders
+            const endpoint = currentUser.role === 'ADMIN' 
+                ? `${backendUrl}/admin/orders` 
+                : `${backendUrl}/buyer/orders`;
+            
+            const res = await fetch(endpoint, {
                 headers: {
                     'Authorization': `Bearer ${currentUser.token}`
                 }
             });
             if (res.ok) {
-                const orderHistory = await res.json();
-                // Transform backend OrderDTO to frontend structure
-                const transformedOrders = orderHistory.orders.map(order => ({
-                    id: order.id,
-                    product: order.items.map(item => item.productName).join(', '), // Combine product names
-                    date: order.createdAt,
-                    status: order.status.toLowerCase(), // Convert to lowercase for frontend
-                    totalAmount: parseFloat(order.totalAmount),
-                    items: order.items, // Now contains productId
-                    buyer: `${currentUser?.firstName} ${currentUser?.lastName}` || "Buyer", // Add buyer field
-                    quantity: order.items.map(item => `${item.quantity} units`).join(', '), // Add quantity field
-                    shippingAddress: order.shippingAddress,
-                    rated: order.rated, // From backend isRated
-                    rating: order.rating
-                }));
-                setOrders(transformedOrders);
-                console.log("Orders loaded from backend:", transformedOrders.length);
+                if (currentUser.role === 'ADMIN') {
+                    // Admin gets list of Order entities directly
+                    const allOrders = await res.json();
+                    const transformedOrders = allOrders.map(order => ({
+                        id: order.id,
+                        product: order.orderItems?.map(item => item.productName).join(', ') || "N/A",
+                        date: order.createdAt,
+                        status: order.status?.toLowerCase() || "pending",
+                        totalAmount: parseFloat(order.totalAmount || 0),
+                        items: order.orderItems || [],
+                        buyer: order.buyer ? `${order.buyer.first_name || ''} ${order.buyer.Last_name || ''}`.trim() : "Unknown",
+                        quantity: order.orderItems?.map(item => `${item.quantity} units`).join(', ') || "N/A",
+                        shippingAddress: order.shippingAddress,
+                        rated: order.rated || false,
+                        rating: order.rating
+                    }));
+                    setOrders(transformedOrders);
+                    console.log("Admin orders loaded from backend:", transformedOrders.length);
+                } else {
+                    // Buyer gets OrderHistoryDTO
+                    const orderHistory = await res.json();
+                    const transformedOrders = orderHistory.orders.map(order => ({
+                        id: order.id,
+                        product: order.items.map(item => item.productName).join(', '),
+                        date: order.createdAt,
+                        status: order.status.toLowerCase(),
+                        totalAmount: parseFloat(order.totalAmount),
+                        items: order.items,
+                        buyer: `${currentUser?.first_name || ''} ${currentUser?.Last_name || ''}`.trim() || "Buyer",
+                        quantity: order.items.map(item => `${item.quantity} units`).join(', '),
+                        shippingAddress: order.shippingAddress,
+                        rated: order.rated,
+                        rating: order.rating
+                    }));
+                    setOrders(transformedOrders);
+                    console.log("Buyer orders loaded from backend:", transformedOrders.length);
+                }
             }
         } catch (err) {
             console.error("Failed to fetch orders", err);
@@ -360,12 +390,118 @@ export function AppProvider({ children }) {
     };
 
     useEffect(() => {
-        if (currentUser?.token && currentUser?.role === 'BUYER') {
+        if (currentUser?.token && (currentUser?.role === 'BUYER' || currentUser?.role === 'ADMIN')) {
             fetchOrdersFromBackend();
         } else {
             setOrders([]);
         }
     }, [currentUser]);
+
+    // Fetch farmers and buyers data for Admin
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            if (!currentUser?.token || currentUser?.role !== 'ADMIN') {
+                setBuyers([]);
+                setFarmers([]);
+                return;
+            }
+
+            try {
+                // Fetch all farmers
+                const farmersRes = await fetch(`${backendUrl}/admin/farmers`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.token}`
+                    }
+                });
+                if (farmersRes.ok) {
+                    const farmersData = await farmersRes.json();
+                    const transformedFarmers = farmersData.map(farmer => ({
+                        id: farmer.id,
+                        name: `${farmer.first_name || ''} ${farmer.Last_name || ''}`.trim(),
+                        email: farmer.email,
+                        phone: farmer.phone || "N/A",
+                        location: farmer.city ? `${farmer.city}, ${farmer.state}` : farmer.state || "N/A",
+                        status: farmer.status?.toLowerCase() || "active",
+                        joinDate: farmer.createdAt,
+                        totalRevenue: 0,
+                        totalProducts: 0,
+                        rating: farmer.averageRating || "0",
+                        profileImageUrl: farmer.profileImageUrl || "https://images.unsplash.com/photo-1595273670150-bd0c3c392e46?w=400&h=400&fit=crop"
+                    }));
+                    setFarmers(transformedFarmers);
+                    console.log("Farmers loaded from backend:", transformedFarmers.length);
+                }
+
+                // Fetch all buyers
+                const buyersRes = await fetch(`${backendUrl}/admin/buyers`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentUser.token}`
+                    }
+                });
+                if (buyersRes.ok) {
+                    const buyersData = await buyersRes.json();
+                    const transformedBuyers = buyersData.map(buyer => ({
+                        id: buyer.id,
+                        name: `${buyer.first_name || ''} ${buyer.Last_name || ''}`.trim(),
+                        email: buyer.email,
+                        phone: buyer.phone || "N/A",
+                        location: buyer.city ? `${buyer.city}, ${buyer.state}` : buyer.state || "N/A",
+                        status: buyer.status?.toLowerCase() || "active",
+                        joinDate: buyer.createdAt,
+                        totalOrders: 0, // TODO: Calculate from orders if needed
+                        totalSpent: 0,
+                        profileImageUrl: buyer.profileImageUrl || "https://images.unsplash.com/photo-1633332755192-727a05c4013d?w=400&h=400&fit=crop"
+                    }));
+                    setBuyers(transformedBuyers);
+                    console.log("Buyers loaded from backend:", transformedBuyers.length);
+                }
+            } catch (err) {
+                console.error("Failed to fetch admin data", err);
+                setBuyers([]);
+                setFarmers([]);
+            }
+        };
+
+        fetchAdminData();
+    }, [currentUser]);
+
+    // Update farmer revenue and product counts when orders or products change
+    useEffect(() => {
+        if (currentUser?.role === 'ADMIN' && farmers.length > 0 && orders.length > 0) {
+            const updatedFarmers = farmers.map(farmer => {
+                // Calculate revenue from delivered orders for this farmer
+                const farmerOrders = orders.filter(order => {
+                    if (order.status !== 'DELIVERED' && order.status !== 'delivered') return false;
+                    // Check if any order item belongs to this farmer
+                    return order.items?.some(item => item.farmer?.id === farmer.id || item.farmer?.email === farmer.email);
+                });
+                
+                const totalRevenue = farmerOrders.reduce((sum, order) => {
+                    // Sum only the items from this farmer
+                    const farmerItems = order.items?.filter(item => 
+                        item.farmer?.id === farmer.id || item.farmer?.email === farmer.email
+                    ) || [];
+                    
+                    const farmerOrderTotal = farmerItems.reduce((itemSum, item) => 
+                        itemSum + (item.price * item.quantity), 0
+                    );
+                    
+                    return sum + farmerOrderTotal;
+                }, 0);
+                
+                // Count products from this farmer
+                const totalProducts = products.filter(p => p.farmerId === farmer.id).length;
+                
+                return {
+                    ...farmer,
+                    totalRevenue,
+                    totalProducts
+                };
+            });
+            
+            setFarmers(updatedFarmers);
+        }
+    }, [orders, products]);
 
     // Product operations
     const addProduct = (product) => {
@@ -427,21 +563,17 @@ export function AppProvider({ children }) {
     };
 
     // Crop Cycle operations
-    // Crop Cycle operations
-    // Crop Cycle operations
     const fetchCropCycles = async () => {
-        if (currentUser?.token) {
+        // Only fetch crop cycles if user is a FARMER
+        if (currentUser?.token && currentUser?.role === "FARMER") {
             try {
                 const data = await cropCycleService.getAllCropCycles();
                 setCropCycles(data);
                 console.log("Crop cycles loaded:", data.length);
             } catch (err) {
                 console.error("Failed to load crop cycles", err);
-                if (err.status === 401 || err.status === 403) {
-                    console.warn("Session expired or invalid. Logging out.");
-                    logout();
-                    toast.error("Session expired. Please login again.");
-                } else {
+                // Don't show toast for 403 errors (user not farmer) to avoid spam
+                if (err.status !== 403) {
                     toast.error("Failed to load crop cycles");
                 }
             }
@@ -450,20 +582,9 @@ export function AppProvider({ children }) {
         }
     };
 
-    // Verify session on mount or token change
-    const verifySession = async () => {
-        // Keep verifySession but remove auto-logout loop risk if needed, or just revert to simple check
-        // User asked to revert ALL changes related to stale token handling.
-        // The original connection code didn't have verifySession at all in the early stages, 
-        // but it's good practice. However, adhering to "revert all changes":
-        // I will remove the verifySession call inside useEffect if it's causing issues, 
-        // or just make it less aggressive.
-        // For now, I'll remove the aggressive logout logic from catch blocks first.
-    };
-
     useEffect(() => {
         fetchCropCycles();
-    }, [currentUser?.token]);
+    }, [currentUser?.token, currentUser?.role]);
 
     const addCropCycle = async (cropCycle) => {
         try {
@@ -535,20 +656,224 @@ export function AppProvider({ children }) {
     };
 
     // Notification operations
-    const addNotification = (notification) => {
-        const newNotification = {
-            ...notification,
-            id: Math.max(0, ...notifications.map((n) => n.id)) + 1,
+    const fetchNotifications = useCallback(async () => {
+        if (!currentUser?.id) {
+            console.log('[Notifications] No currentUser.id, skipping fetch');
+            return;
+        }
+        try {
+            console.log('[Notifications] Fetching notifications for user:', currentUser.id);
+            const response = await notificationService.getNotifications(currentUser.id, 0, 50);
+            console.log('[Notifications] Response received:', response);
+            
+            if (response && response.notifications) {
+                const formattedNotifications = response.notifications.map(n => ({
+                    id: n.id,
+                    type: n.type.toLowerCase(),
+                    title: n.title,
+                    message: n.message,
+                    timestamp: notificationService.formatTimestamp(n.createdAt),
+                    read: n.isRead,
+                    priority: n.priority,
+                    data: n.data,
+                    createdAt: n.createdAt
+                }));
+                console.log('[Notifications] Formatted notifications:', formattedNotifications.length);
+                console.log('[Notifications] Unread count from API:', response.unreadCount);
+                setNotifications(formattedNotifications);
+                setNotificationUnreadCount(response.unreadCount || 0);
+                console.log('[Notifications] State updated - Count:', response.unreadCount);
+            } else {
+                console.warn('[Notifications] Response missing notifications array');
+                setNotifications([]);
+                setNotificationUnreadCount(0);
+            }
+        } catch (error) {
+            console.error('[Notifications] Error fetching notifications:', error);
+            console.error('[Notifications] Error details:', {
+                message: error.message,
+                response: error.response,
+                status: error.response?.status
+            });
+            // Don't break the app if notifications fail - just set empty state
+            setNotifications([]);
+            setNotificationUnreadCount(0);
+        }
+    }, [currentUser?.id]);
+
+    const addNotification = async (notification) => {
+        if (!currentUser?.id) return;
+        try {
+            const createDto = {
+                userId: currentUser.id,
+                type: notification.type.toUpperCase(),
+                title: notification.title,
+                message: notification.message,
+                data: notification.data || null,
+                priority: notification.priority || 'MEDIUM'
+            };
+            await notificationService.createNotification(createDto);
+            await fetchNotifications();
+        } catch (error) {
+            console.error('Error creating notification:', error);
+        }
+    };
+
+    const markNotificationAsRead = async (id) => {
+        if (!currentUser?.id) return;
+        try {
+            await notificationService.markAsRead(id, currentUser.id);
+            // Remove notification from list when marked as read
+            const notification = notifications.find(n => n.id === id);
+            setNotifications(notifications.filter((n) => n.id !== id));
+            if (notification && !notification.read) {
+                setNotificationUnreadCount(prev => Math.max(0, prev - 1));
+            }
+        } catch (error) {
+            console.error('Error marking notification as read:', error);
+        }
+    };
+
+    const markAllNotificationsAsRead = async () => {
+        if (!currentUser?.id) return;
+        try {
+            await notificationService.markAllAsRead(currentUser.id);
+            // Clear all notifications from the list
+            setNotifications([]);
+            setNotificationUnreadCount(0);
+            toast.success('All notifications cleared');
+        } catch (error) {
+            console.error('Error marking all as read:', error);
+            toast.error('Failed to clear notifications');
+        }
+    };
+
+    const deleteNotification = async (id) => {
+        if (!currentUser?.id) return;
+        try {
+            await notificationService.deleteNotification(id, currentUser.id);
+            const notification = notifications.find(n => n.id === id);
+            setNotifications(notifications.filter((n) => n.id !== id));
+            if (notification && !notification.read) {
+                setNotificationUnreadCount(prev => Math.max(0, prev - 1));
+            }
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+        }
+    };
+
+    // Fetch notifications when user logs in
+    useEffect(() => {
+        if (currentUser?.id && currentUser?.token) {
+            console.log('[Notifications] Setting up auto-fetch for user:', currentUser.id);
+            
+            // Fetch immediately
+            fetchNotifications();
+            
+            // Poll for new notifications every 30 seconds
+            const interval = setInterval(() => {
+                console.log('[Notifications] Auto-polling notifications...');
+                fetchNotifications();
+            }, 30000);
+            
+            return () => {
+                console.log('[Notifications] Cleaning up notification polling');
+                clearInterval(interval);
+            };
+        } else {
+            // Clear notifications when user logs out
+            console.log('[Notifications] Clearing notifications - no user');
+            setNotifications([]);
+            setNotificationUnreadCount(0);
+        }
+    }, [currentUser?.id, currentUser?.token, fetchNotifications]);
+
+    // Debug: Track notification count changes
+    useEffect(() => {
+        console.log('[Notifications] notificationUnreadCount changed to:', notificationUnreadCount);
+        console.log('[Notifications] Total notifications in state:', notifications.length);
+    }, [notificationUnreadCount, notifications.length]);
+
+    // Fetch weather data when user logs in
+    useEffect(() => {
+        const fetchWeather = async () => {
+            if (!currentUser?.city) {
+                // Try to get weather by default city or user location
+                try {
+                    const weatherData = await weatherService.getCurrentWeather('Punjab', 'IN');
+                    setCurrentWeather(weatherData);
+                } catch (error) {
+                    console.error('Error fetching weather:', error);
+                }
+                return;
+            }
+
+            try {
+                const weatherData = await weatherService.getCurrentWeather(currentUser.city, 'IN');
+                setCurrentWeather(weatherData);
+            } catch (error) {
+                console.error('Error fetching weather for user city:', error);
+            }
         };
-        setNotifications([...notifications, newNotification]);
+
+        if (currentUser) {
+            fetchWeather();
+            // Refresh weather every 30 minutes
+            const interval = setInterval(fetchWeather, 1800000);
+            return () => clearInterval(interval);
+        }
+    }, [currentUser?.id, currentUser?.city]);
+
+    // Fetch wallet balance when user logs in
+    useEffect(() => {
+        const fetchWalletBalance = async () => {
+            if (!currentUser?.token) return;
+            
+            try {
+                const response = await walletService.getBalance();
+                setWalletBalance(response.balance || 0);
+            } catch (error) {
+                console.error('Error fetching wallet balance:', error);
+            }
+        };
+
+        if (currentUser) {
+            fetchWalletBalance();
+            
+            // Poll wallet balance every 5 seconds to catch real-time changes
+            const walletInterval = setInterval(() => {
+                fetchWalletBalance();
+            }, 5000);
+            
+            return () => clearInterval(walletInterval);
+        }
+    }, [currentUser?.id, currentUser?.token]);
+
+    // Wallet operations
+    const addMoneyToWallet = async (amount) => {
+        if (!currentUser?.token) return;
+        
+        try {
+            const response = await walletService.addMoney(amount);
+            setWalletBalance(response.newBalance);
+            toast.success(`₹${amount} added to wallet successfully`);
+            return response;
+        } catch (error) {
+            console.error('Error adding money to wallet:', error);
+            toast.error('Failed to add money to wallet');
+            throw error;
+        }
     };
 
-    const markNotificationAsRead = (id) => {
-        setNotifications(notifications.map((n) => (n.id === id ? { ...n, read: true } : n)));
-    };
-
-    const deleteNotification = (id) => {
-        setNotifications(notifications.filter((n) => n.id !== id));
+    const fetchWalletBalance = async () => {
+        if (!currentUser?.token) return;
+        
+        try {
+            const response = await walletService.getBalance();
+            setWalletBalance(response.balance || 0);
+        } catch (error) {
+            console.error('Error fetching wallet balance:', error);
+        }
     };
 
     // Buyer operations
@@ -912,9 +1237,12 @@ export function AppProvider({ children }) {
         updateScheme,
         deleteScheme,
         notifications,
+        notificationUnreadCount,
         addNotification,
         markNotificationAsRead,
+        markAllNotificationsAsRead,
         deleteNotification,
+        fetchNotifications,
         buyers,
         addBuyer,
         updateBuyer,
@@ -943,6 +1271,10 @@ export function AppProvider({ children }) {
         updateUserProfile,
         uploadProfileImage,
         removeProfileImage,
+        currentWeather,
+        walletBalance,
+        addMoneyToWallet,
+        fetchWalletBalance,
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

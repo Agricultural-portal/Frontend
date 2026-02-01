@@ -4,15 +4,24 @@ const getAuthHeaders = () => {
   const currentUserStr = localStorage.getItem("currentUser");
   const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
   const token = currentUser?.token;
+  
+  // Also check standalone token as fallback
+  const standaloneToken = localStorage.getItem("token");
+  const finalToken = token || standaloneToken;
+
+  console.log("[taskService] currentUser from localStorage:", currentUser ? currentUser.email : "NO USER");
+  console.log("[taskService] Token from currentUser:", token ? `${token.substring(0, 20)}...` : "NO TOKEN");
+  console.log("[taskService] Standalone token:", standaloneToken ? `${standaloneToken.substring(0, 20)}...` : "NO TOKEN");
+  console.log("[taskService] Final token used:", finalToken ? `${finalToken.substring(0, 20)}...` : "NO TOKEN");
 
   const headers = {
     "Content-Type": "application/json",
   };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-    console.log("Using auth token for user:", currentUser?.email);
+  if (finalToken) {
+    headers["Authorization"] = `Bearer ${finalToken}`;
+    console.log("[taskService] Using auth token for user:", currentUser?.email || "unknown");
   } else {
-    console.warn("No auth token found in localStorage (checked 'currentUser')");
+    console.error("[taskService] NO AUTH TOKEN FOUND in localStorage!");
   }
   return headers;
 };
@@ -26,12 +35,24 @@ export const taskService = {
 
     if (params.toString()) url += `?${params.toString()}`;
 
+    console.log("[taskService] Fetching all tasks from:", url);
+    const headers = getAuthHeaders();
+    console.log("[taskService] Request headers:", headers);
+
     const response = await fetch(url, {
       method: "GET",
-      headers: getAuthHeaders(),
+      headers,
     });
-    if (!response.ok) throw new Error("Failed to fetch tasks");
-    return response.json();
+    
+    console.log("[taskService] getAllTasks response status:", response.status);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[taskService] getAllTasks error response:", errorText);
+      throw new Error(`Failed to fetch tasks: ${response.status} - ${errorText}`);
+    }
+    const data = await response.json();
+    console.log("[taskService] Tasks fetched, count:", data.length);
+    return data;
   },
 
   createTask: async (taskData) => {

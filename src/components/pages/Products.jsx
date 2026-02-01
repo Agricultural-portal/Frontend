@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
@@ -41,7 +39,7 @@ import { productService } from "@/services/productService";
 import { orderService } from "@/services/orderService";
 
 export function Products() {
-  const { updateOrder, currentUser } = useAppContext();
+  const { updateOrder, currentUser, fetchWalletBalance } = useAppContext();
   // Fallback farmer ID if not logged in (for dev)
   const farmerId = currentUser?.id || 1;
 
@@ -133,12 +131,20 @@ export function Products() {
 
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
     try {
+      console.log(`Updating order ${orderId} to status: ${newStatus}`);
       await orderService.updateOrderStatus(orderId, newStatus);
       setMyOrders(myOrders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
       toast.success(`Order status updated to ${newStatus}`);
+      
+      // Refresh wallet balance if order is marked as DELIVERED
+      if (newStatus.toUpperCase() === 'DELIVERED') {
+        console.log('Order marked as DELIVERED - refreshing wallet balance...');
+        await fetchWalletBalance();
+        toast.success('💰 Payment transferred successfully!');
+      }
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to update order status");
+      console.error('Error updating order status:', error);
+      toast.error(error.response?.data?.message || "Failed to update order status");
     }
   };
 

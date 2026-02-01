@@ -1,11 +1,11 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useAppContext } from "@/lib/AppContext";
 import { dashboardService } from "@/services/dashboardService";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Progress } from "../ui/progress";
+import WeatherWidget from "../weather/WeatherWidget";
+import WalletCard from "../farmer/WalletCard";
 import {
   ListTodo,
   Sprout,
@@ -195,6 +195,12 @@ export function Dashboard() {
             </Card>
           );
         })}
+      </div>
+
+      {/* Weather Widget and Wallet */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <WeatherWidget city={currentUser?.city || "Mumbai"} country="in" />
+        <WalletCard />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

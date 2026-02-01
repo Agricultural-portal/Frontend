@@ -13,11 +13,6 @@ export default function RegisterPage() {
                 return;
             }
 
-            // Parse location into city and state
-            const locationParts = data.location.split(',').map(part => part.trim());
-            const city = locationParts[0] || '';
-            const state = locationParts[1] || '';
-
             let payload;
             let endpoint;
 
@@ -27,10 +22,10 @@ export default function RegisterPage() {
                     lastName: data.lastName,
                     email: data.email,
                     phone: data.phone,
-                    addresss: data.location, // Use full location as address
-                    city: city,
-                    state: state,
-                    pincode: '', // Default empty
+                    addresss: data.addresss,
+                    city: data.city,
+                    state: data.state,
+                    pincode: data.pincode,
                     password: data.password
                 };
                 endpoint = "http://localhost:8080/api/auth/signup/admin";
@@ -40,10 +35,10 @@ export default function RegisterPage() {
                     lastName: data.lastName,
                     email: data.email,
                     phone: data.phone,
-                    addresss: data.location,
-                    city: city,
-                    state: state,
-                    pincode: '',
+                    addresss: data.addresss,
+                    city: data.city,
+                    state: data.state,
+                    pincode: data.pincode,
                     password: data.password
                 };
                 endpoint = "http://localhost:8080/api/auth/signup/buyer";
@@ -53,12 +48,12 @@ export default function RegisterPage() {
                     lastName: data.lastName,
                     email: data.email,
                     phone: data.phone,
-                    addresss: data.location,
-                    city: city,
-                    state: state,
-                    pincode: '',
+                    addresss: data.addresss,
+                    city: data.city,
+                    state: data.state,
+                    pincode: data.pincode,
                     farmSize: parseFloat(data.farmSize) || 0,
-                    farmType: 'MIXED', // Default farm type
+                    farmType: data.farmType || 'MIXED',
                     password: data.password
                 };
                 endpoint = "http://localhost:8080/api/auth/signup/farmer";
