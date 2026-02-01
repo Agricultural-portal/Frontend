@@ -1,33 +1,40 @@
-"use client";
-
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Bell, CheckCheck, ListTodo, Cloud, Wallet, Settings } from "lucide-react";
-import { mockNotifications } from "@/lib/mockData";
+import { useAppContext } from "@/lib/AppContext";
 
 export function Notifications() {
+  const { notifications, notificationUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } = useAppContext();
+  
   const getNotificationIcon = (type) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case "task": return ListTodo;
       case "weather": return Cloud;
       case "payment": return Wallet;
       case "system": return Settings;
+      case "order": return Bell;
+      case "scheme": return Bell;
+      case "product": return Bell;
+      case "rating": return Bell;
+      case "user": return Bell;
       default: return Bell;
     }
   };
 
   const getTypeColor = (type) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case "task": return "bg-blue-100 text-blue-700";
       case "weather": return "bg-yellow-100 text-yellow-700";
       case "payment": return "bg-green-100 text-green-700";
       case "system": return "bg-purple-100 text-purple-700";
+      case "order": return "bg-orange-100 text-orange-700";
+      case "scheme": return "bg-indigo-100 text-indigo-700";
       default: return "bg-slate-100 text-slate-700";
     }
   };
 
-  const unreadCount = mockNotifications.filter((n) => !n.read).length;
+  const unreadCount = notificationUnreadCount || 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -38,45 +45,64 @@ export function Notifications() {
             {unreadCount > 0 ? `You have ${unreadCount} unread notifications` : "All caught up!"}
           </p>
         </div>
-        <Button variant="outline" className="gap-2 font-bold">
+        <Button variant="outline" className="gap-2 font-bold" onClick={markAllNotificationsAsRead}>
           <CheckCheck className="w-4 h-4" />
           Mark All as Read
         </Button>
       </div>
 
       <div className="space-y-4">
-        {mockNotifications.map((notification) => {
-          const Icon = getNotificationIcon(notification.type);
-          return (
-            <Card
-              key={notification.id}
-              className={`border-none shadow-sm ${notification.read ? "opacity-60" : "bg-white"}`}
-            >
-              <CardContent className="p-4 flex items-start gap-4">
-                <div className={`p-3 rounded-xl ${getTypeColor(notification.type)}`}>
-                  <Icon className="w-5 h-5" />
-                </div>
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-bold">{notification.title}</h3>
-                    <Badge variant="secondary" className="capitalize">{notification.type}</Badge>
+        {notifications.length === 0 ? (
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-12 text-center text-muted-foreground">
+              <Bell className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium">No notifications yet</p>
+              <p className="text-sm mt-2">You'll see notifications here when you have updates</p>
+            </CardContent>
+          </Card>
+        ) : (
+          notifications.map((notification) => {
+            const Icon = getNotificationIcon(notification.type);
+            return (
+              <Card
+                key={notification.id}
+                className={`border-none shadow-sm ${notification.read ? "opacity-60" : "bg-white"}`}
+              >
+                <CardContent className="p-4 flex items-start gap-4">
+                  <div className={`p-3 rounded-xl ${getTypeColor(notification.type)}`}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <p className="text-sm text-muted-foreground">{notification.message}</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-muted-foreground">{notification.timestamp}</span>
-                    {!notification.read && (
-                      <Button variant="ghost" size="sm" className="h-8 text-xs font-bold">Mark as read</Button>
-                    )}
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-bold">{notification.title}</h3>
+                      <Badge variant="secondary" className="capitalize">{notification.type}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{notification.message}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-muted-foreground">{notification.timestamp}</span>
+                      {!notification.read && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 text-xs font-bold"
+                          onClick={() => markNotificationAsRead(notification.id)}
+                        >
+                          Mark as read
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       <Card className="border-none shadow-sm">
-        <CardHeader><CardTitle className="text-lg">Notification Settings</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Notification Settings</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-4 pt-0">
           <p className="text-sm text-muted-foreground">Manage which alerts you want to receive.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
