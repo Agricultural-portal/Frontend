@@ -95,7 +95,7 @@ export function ManageBuyers() {
         password: formData.password
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/auth/signup/buyer", {
+      const response = await fetch(`${API_BASE_URL}/auth/signup/buyer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -135,7 +135,7 @@ export function ManageBuyers() {
         pincode: formData.pincode
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/admin/users/${selectedBuyer.id}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${selectedBuyer.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -163,7 +163,7 @@ export function ManageBuyers() {
     if (window.confirm(`Are you sure you want to remove ${name}?`)) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/admin/users/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -186,7 +186,7 @@ export function ManageBuyers() {
   const handleStatusToggle = async (buyer) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/admin/users/${buyer.id}/status`, {
+      const response = await fetch(`${API_BASE_URL}/admin/users/${buyer.id}/status`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -622,5 +622,6 @@ export function ManageBuyers() {
     </div>
   );
 }
+
 
 

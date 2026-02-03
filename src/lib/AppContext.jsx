@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { API_BASE_URL } from "@/services/config";
 import {
     mockProducts,
     mockOrders,
@@ -75,7 +76,7 @@ export function AppProvider({ children }) {
         favoritesCount: 0
     });
 
-    const backendUrl = `${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}";
+    const backendUrl = API_BASE_URL;
 
     // Persist user to localStorage whenever it changes
     useEffect(() => {

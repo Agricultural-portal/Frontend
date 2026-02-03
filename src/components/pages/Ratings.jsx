@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { API_BASE_URL } from '@/services/config';
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Star } from "lucide-react";
@@ -19,7 +20,7 @@ export function Ratings() {
         try {
           console.log("Fetching recent ratings for farmer:", currentUser.email);
           console.log("Token available:", !!currentUser.token);
-          const res = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/farmers/ratings/recent`, {
+          const res = await fetch(`${API_BASE_URL}/farmers/ratings/recent`, {
             headers: {
               'Authorization': `Bearer ${currentUser.token}`
             }
@@ -50,7 +51,7 @@ export function Ratings() {
   const fetchAllRatings = async () => {
     if (currentUser?.id && currentUser?.token) {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/farmers/ratings`, {
+        const res = await fetch(`${API_BASE_URL}/farmers/ratings`, {
           headers: {
             'Authorization': `Bearer ${currentUser.token}`
           }
@@ -150,4 +151,5 @@ export function Ratings() {
     </div>
   );
 }
+
 

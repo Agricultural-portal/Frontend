@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Login } from "@/components/Login";
 import { useAppContext } from "@/lib/AppContext";
 import { toast } from "sonner";
+import { API_BASE_URL } from "@/services/config";
 
 export default function LoginPage() {
     const navigate = useNavigate();
@@ -10,7 +11,7 @@ export default function LoginPage() {
     const handleLogin = async (selectedRole, email, password) => {
         try {
             // Attempt backend login
-            const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/auth/login", {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password })
