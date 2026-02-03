@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => {
     console.log('🔍 All VITE_ variables:', Object.keys(env).filter(key => key.startsWith('VITE_')))
     
     return {
+    // Explicitly define environment variables to make them available in the app
+    define: {
+        'import.meta.env.VITE_API_URL': JSON.stringify(env.VITE_API_URL || 'https://backend-089c.onrender.com/api'),
+    },
     plugins: [
         react(),
         tailwindcss(),
