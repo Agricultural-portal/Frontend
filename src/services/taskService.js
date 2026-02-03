@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:8080/api/task";
+import { API_BASE_URL } from './config.js';
+
+const API_URL = `${API_BASE_URL}/task`;
 
 const getAuthHeaders = () => {
   const currentUserStr = localStorage.getItem("currentUser");

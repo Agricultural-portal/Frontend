@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:8080/api/orders";
+import { API_BASE_URL } from './config.js';
+
+const API_URL = `${API_BASE_URL}/orders`;
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem("token");
@@ -40,7 +42,7 @@ export const orderService = {
     },
 
     updateOrderStatus: async (orderId, status) => {
-        const response = await fetch(`http://localhost:8080/api/farmer/orders/${orderId}/status?status=${status}`, {
+        const response = await fetch(`${API_BASE_URL}/farmer/orders/${orderId}/status?status=${status}`, {
             method: "PUT",
             headers: getAuthHeaders(),
         });

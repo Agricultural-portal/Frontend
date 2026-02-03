@@ -1,4 +1,6 @@
-const API_URL = "http://localhost:8080/api/farmer";
+import { API_BASE_URL } from './config.js';
+
+const API_URL = `${API_BASE_URL}/farmer`;
 
 const getAuthHeaders = (isMultipart = false) => {
     const token = localStorage.getItem("token");

@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Register } from "@/components/Register";
 import { toast } from "sonner";
+import { API_BASE_URL } from "@/services/config";
 
 export default function RegisterPage() {
     const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function RegisterPage() {
                     pincode: data.pincode,
                     password: data.password
                 };
-                endpoint = "http://localhost:8080/api/auth/signup/admin";
+                endpoint = `${API_BASE_URL}/auth/signup/admin`;
             } else if (data.role === 'buyer') {
                 payload = {
                     firstName: data.firstName,
@@ -41,7 +42,7 @@ export default function RegisterPage() {
                     pincode: data.pincode,
                     password: data.password
                 };
-                endpoint = "http://localhost:8080/api/auth/signup/buyer";
+                endpoint = `${API_BASE_URL}/auth/signup/buyer`;
             } else if (data.role === 'farmer') {
                 payload = {
                     firstName: data.firstName,
@@ -56,7 +57,7 @@ export default function RegisterPage() {
                     farmType: data.farmType || 'MIXED',
                     password: data.password
                 };
-                endpoint = "http://localhost:8080/api/auth/signup/farmer";
+                endpoint = `${API_BASE_URL}/auth/signup/farmer`;
             }
 
             const response = await fetch(endpoint, {
