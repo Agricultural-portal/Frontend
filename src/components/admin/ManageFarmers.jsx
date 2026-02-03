@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useAppContext } from "@/lib/AppContext";
+import { API_BASE_URL } from "@/services/config";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
