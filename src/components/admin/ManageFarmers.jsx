@@ -88,7 +88,7 @@ export function ManageFarmers() {
         password: formData.password
       };
 
-      const response = await fetch("http://localhost:8080/api/auth/signup/farmer", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/auth/signup/farmer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -131,7 +131,7 @@ export function ManageFarmers() {
         farmType: formData.farmType
       };
 
-      const response = await fetch(`http://localhost:8080/api/admin/users/${selectedFarmer.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/admin/users/${selectedFarmer.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -159,7 +159,7 @@ export function ManageFarmers() {
     if (window.confirm(`Are you sure you want to delete ${name}?`)) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:8080/api/admin/users/${id}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/admin/users/${id}`, {
           method: "DELETE",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -182,7 +182,7 @@ export function ManageFarmers() {
   const handleStatusToggle = async (farmer) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:8080/api/admin/users/${farmer.id}/status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/admin/users/${farmer.id}/status`, {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -710,3 +710,5 @@ export function ManageFarmers() {
     </div>
   );
 }
+
+

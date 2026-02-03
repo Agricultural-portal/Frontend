@@ -91,7 +91,7 @@ export function MyCart() {
 
     try {
       // Place order via backend API
-      const response = await fetch("http://localhost:8080/api/buyer/orders/place", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/buyer/orders/place", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -294,3 +294,4 @@ export function MyCart() {
     </div>
   );
 }
+

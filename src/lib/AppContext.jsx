@@ -75,7 +75,7 @@ export function AppProvider({ children }) {
         favoritesCount: 0
     });
 
-    const backendUrl = "http://localhost:8080/api";
+    const backendUrl = `${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}";
 
     // Persist user to localStorage whenever it changes
     useEffect(() => {
@@ -1287,3 +1287,4 @@ export function useAppContext() {
     }
     return context;
 }
+

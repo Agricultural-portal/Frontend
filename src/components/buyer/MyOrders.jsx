@@ -56,7 +56,7 @@ export function MyOrders() {
 
     // Call backend to save rating
     try {
-      const response = await fetch("http://localhost:8080/api/buyer/ratings/add", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/buyer/ratings/add", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -242,3 +242,4 @@ export function MyOrders() {
     </div>
   );
 }
+

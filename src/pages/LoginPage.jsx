@@ -10,7 +10,7 @@ export default function LoginPage() {
     const handleLogin = async (selectedRole, email, password) => {
         try {
             // Attempt backend login
-            const response = await fetch("http://localhost:8080/api/auth/login", {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || "https://backend-089c.onrender.com/api"}/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password })
@@ -61,3 +61,4 @@ export default function LoginPage() {
 
     return <Login onLogin={handleLogin} onSwitchToRegister={handleSwitchToRegister} />;
 }
+
