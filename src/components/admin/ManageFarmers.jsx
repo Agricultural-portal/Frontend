@@ -89,7 +89,7 @@ export function ManageFarmers() {
         password: formData.password
       };
 
-      const response = await fetch(`${API_BASE_URL}/auth/signup/farmer", {
+      const response = await fetch(`${API_BASE_URL}/auth/signup/farmer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

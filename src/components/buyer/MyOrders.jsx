@@ -57,7 +57,7 @@ export function MyOrders() {
 
     // Call backend to save rating
     try {
-      const response = await fetch(`${API_BASE_URL}/buyer/ratings/add", {
+      const response = await fetch(`${API_BASE_URL}/buyer/ratings/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -92,7 +92,7 @@ export function MyCart() {
 
     try {
       // Place order via backend API
-      const response = await fetch(`${API_BASE_URL}/buyer/orders/place", {
+      const response = await fetch(`${API_BASE_URL}/buyer/orders/place`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -96,7 +96,7 @@ export function ManageBuyers() {
         password: formData.password
       };
 
-      const response = await fetch(`${API_BASE_URL}/auth/signup/buyer", {
+      const response = await fetch(`${API_BASE_URL}/auth/signup/buyer`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
